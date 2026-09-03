@@ -3,7 +3,11 @@ import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 
+import '../data/models/cambio_solicitado.dart';
+import '../data/services/servicio_disponibilidad.dart';
 import '../data/services/servicio_notificaciones.dart';
+import '../utils/estado_cita.dart';
+import '../utils/franjas_cita.dart';
 
 class SincronizadorRecordatorios extends StatefulWidget {
   final String uid;
@@ -27,6 +31,7 @@ class _SincronizadorRecordatoriosState
   StreamSubscription<QuerySnapshot>? _suscripcion;
 
   final _estadoPrevio = <String, String>{};
+  final _caducando = <String>{};
   bool _primeraCarga = true;
 
   @override
@@ -50,6 +55,7 @@ class _SincronizadorRecordatoriosState
         .where(campo, isEqualTo: widget.uid)
         .snapshots()
         .listen((consulta) {
+          _caducarAbandonadas(consulta.docs);
           _avisarDeLosCambios(consulta.docs);
 
           final recordatorios = ServicioNotificaciones.desdeCitas(
@@ -58,6 +64,50 @@ class _SincronizadorRecordatoriosState
           );
           ServicioNotificaciones.instancia.sincronizar(recordatorios);
         }, onError: (_) {});
+  }
+
+  // Las dos partes escuchan sus propias citas, asi que a la larga alguna de
+  // las dos abre la app y cierra la solicitud abandonada. Escribir lo mismo
+  // dos veces no hace daño: el estado deja de ser 'pending' y no vuelve a
+  // entrar aqui.
+  void _caducarAbandonadas(List<QueryDocumentSnapshot> documentos) {
+    for (final documento in documentos) {
+      final datos = documento.data() as Map<String, dynamic>;
+
+      if (!solicitudAbandonada(datos)) continue;
+      if (!_caducando.add(documento.id)) continue;
+
+      _caducar(documento.id, datos);
+    }
+  }
+
+  Future<void> _caducar(String citaId, Map<String, dynamic> cita) async {
+    try {
+      await FirebaseFirestore.instance
+          .collection('bookings')
+          .doc(citaId)
+          .update({
+            'status': 'cancelled',
+            'canceladaPor': canceladaPorSistema,
+            'motivoCancelacion': 'La solicitud se venció sin respuesta',
+            'respondidoEn': FieldValue.serverTimestamp(),
+            'avisoVisto': false,
+            CambioSolicitado.clave: FieldValue.delete(),
+          });
+
+      final fecha = inicioCita(cita);
+      final profesionalId = cita['professionalId'] as String?;
+      if (fecha == null || profesionalId == null) return;
+
+      await ServicioDisponibilidad().liberarReserva(
+        profesionalId: profesionalId,
+        fecha: fecha,
+        horas: franjasDeLaCita(cita),
+        citaId: citaId,
+      );
+    } catch (_) {
+      _caducando.remove(citaId);
+    }
   }
 
   void _avisarDeLosCambios(List<QueryDocumentSnapshot> documentos) {
@@ -72,7 +122,11 @@ class _SincronizadorRecordatoriosState
       if (_primeraCarga || anterior == estado) continue;
 
       final servicio = (datos['serviceName'] as String?) ?? 'una cita';
-      final texto = _texto(nuevo: estado, esNueva: anterior == null);
+      final texto = _texto(
+        nuevo: estado,
+        esNueva: anterior == null,
+        canceladaPor: datos['canceladaPor'] as String?,
+      );
       if (texto != null) avisos.add((titulo: texto, cuerpo: servicio));
     }
 
@@ -86,21 +140,37 @@ class _SincronizadorRecordatoriosState
     }
   }
 
-  String? _texto({required String nuevo, required bool esNueva}) {
+  String? _texto({
+    required String nuevo,
+    required bool esNueva,
+    required String? canceladaPor,
+  }) {
+    // Cancelar es lo unico que hacen las dos partes, asi que es lo unico que
+    // hay que atribuir: si el movimiento fue tuyo, no te lo avisas a ti mismo.
+    if (nuevo == 'cancelled') {
+      if (canceladaPor == canceladaPorSistema) {
+        return widget.esProfesional
+            ? 'Una solicitud se venció sin respuesta'
+            : 'Tu solicitud venció sin respuesta';
+      }
+
+      final mio = widget.esProfesional ? 'profesional' : 'cliente';
+      if (canceladaPor == mio) return null;
+
+      return widget.esProfesional
+          ? 'Un cliente canceló su cita'
+          : 'Cancelaron tu cita';
+    }
+
     if (widget.esProfesional) {
-      if (esNueva && nuevo == 'pending') return 'Nueva solicitud de cita';
-      if (nuevo == 'cancelled') return 'Un cliente canceló su cita';
+      if (!esNueva) return null;
+      if (nuevo == 'pending') return 'Nueva solicitud de cita';
+      // Con auto-aceptar la cita nace confirmada, sin pasar por 'pending'.
+      if (nuevo == 'confirmed') return 'Tienes una cita nueva';
       return null;
     }
 
-    switch (nuevo) {
-      case 'confirmed':
-        return 'Confirmaron tu cita';
-      case 'cancelled':
-        return 'Cancelaron tu cita';
-      default:
-        return null;
-    }
+    return nuevo == 'confirmed' ? 'Confirmaron tu cita' : null;
   }
 
   @override

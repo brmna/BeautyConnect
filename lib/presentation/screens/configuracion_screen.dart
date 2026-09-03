@@ -10,6 +10,7 @@ import '../../data/models/ubicacion.dart';
 import '../widgets/hoja_cobertura.dart';
 import '../widgets/hoja_modal.dart';
 import '../widgets/mensaje.dart';
+import '../../data/services/servicio_disponibilidad.dart';
 import '../../data/services/servicio_notificaciones.dart';
 import '../../data/auth_repository.dart';
 import 'cambiar_correo_screen.dart';
@@ -363,9 +364,12 @@ class ConfiguracionScreen extends StatelessWidget {
         content: Text(
           esProfesional
               ? 'Dejarás de aparecer en las búsquedas y nadie podrá '
-                    'reservarte citas nuevas. Tus datos se conservan y puedes '
-                    'reactivarla al volver a entrar.'
-              : 'Tu cuenta quedará inactiva. Tus datos se conservan y puedes '
+                    'reservarte citas nuevas. Se cancelarán las citas que '
+                    'tengas pendientes y se avisará a esos clientes. Tus '
+                    'datos se conservan y puedes reactivarla al volver a '
+                    'entrar.'
+              : 'Tu cuenta quedará inactiva y se cancelarán las citas que '
+                    'tengas pendientes. Tus datos se conservan y puedes '
                     'reactivarla al volver a entrar.',
         ),
         actions: [
@@ -392,6 +396,14 @@ class ConfiguracionScreen extends StatelessWidget {
 
     try {
       if (uid != null) {
+        await ServicioDisponibilidad().cancelarActivas(
+          uid: uid,
+          esProfesional: esProfesional,
+          motivo: esProfesional
+              ? 'La manicurista desactivó su cuenta'
+              : 'El cliente desactivó su cuenta',
+        );
+
         await FirebaseFirestore.instance.collection('users').doc(uid).set({
           'activo': false,
           'desactivadaEn': FieldValue.serverTimestamp(),

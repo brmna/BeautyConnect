@@ -1034,6 +1034,8 @@ class _BookingSheetState extends State<_BookingSheet> {
   }
 
   bool get _fueraDeCobertura {
+    if (!_modalidad.esDomicilio) return false;
+
     final distancia = _distanciaAlLocal;
     return distancia != null && distancia > _ajustes.radioCoberturaKm;
   }
@@ -1139,6 +1141,10 @@ class _BookingSheetState extends State<_BookingSheet> {
       if (mounted && !_ajustes.soloDomicilio) {
         setState(() => _modalidad = ModalidadCita.local);
       }
+      mensajero.showSnackBar(
+        construirMensaje(e.mensaje, tipo: TipoAviso.aviso),
+      );
+    } on FueraDeCobertura catch (e) {
       mensajero.showSnackBar(
         construirMensaje(e.mensaje, tipo: TipoAviso.aviso),
       );
