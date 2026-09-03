@@ -15,6 +15,7 @@ import '../../utils/franjas_cita.dart';
 import '../../data/services/servicio_resenas_clientes.dart';
 import '../widgets/avatar_persona.dart';
 import '../widgets/bloque_domicilio.dart';
+import '../widgets/boton_novedades.dart';
 import '../widgets/cabecera_pantalla.dart';
 import '../widgets/confirmacion.dart';
 import '../widgets/hoja_calificar_cliente.dart';
@@ -257,7 +258,13 @@ class _ProfessionalAgendaScreenState extends State<ProfessionalAgendaScreen>
               subtitulo: 'Solicitudes, próximas y pasadas',
               icono: Icons.calendar_month_outlined,
               estilo: EstiloCabecera.destacada,
-              accion: _botonMensajes(),
+              accion: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  BotonNovedades(uid: _uid, esProfesional: true),
+                  _botonMensajes(),
+                ],
+              ),
             ),
             Expanded(
               child: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
@@ -355,8 +362,11 @@ class _ProfessionalAgendaScreenState extends State<ProfessionalAgendaScreen>
                           sePuedeCalificar(c.data()),
                     )
                     .length,
-                onTocar: (nombre) =>
-                    _abrirHistorial(porCliente[indice].clienteId, nombre),
+                onTocar: (nombre) => _abrirHistorial(
+                  porCliente[indice].clienteId,
+                  nombre,
+                  porCliente[indice].citas,
+                ),
               ),
             ),
           ),
@@ -416,7 +426,11 @@ class _ProfessionalAgendaScreenState extends State<ProfessionalAgendaScreen>
         .toList();
   }
 
-  void _abrirHistorial(String clienteId, String nombre) {
+  void _abrirHistorial(
+    String clienteId,
+    String nombre,
+    List<QueryDocumentSnapshot<Map<String, dynamic>>> historial,
+  ) {
     Navigator.push(
       context,
       MaterialPageRoute(
@@ -454,12 +468,10 @@ class _ProfessionalAgendaScreenState extends State<ProfessionalAgendaScreen>
           body: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
             stream: _citas,
             builder: (context, citasSnap) {
-              if (!citasSnap.hasData) {
-                return const Center(child: CircularProgressIndicator());
-              }
+              final documentos = citasSnap.data?.docs ?? historial;
 
               final suyas = _agrupar(
-                citasSnap.data!.docs,
+                documentos,
                 _GrupoSolicitud.pasadas,
               ).where((c) => c.data()['clientId'] == clienteId).toList();
 
@@ -657,7 +669,7 @@ class _ProfessionalAgendaScreenState extends State<ProfessionalAgendaScreen>
       CambioSolicitado.clave: FieldValue.delete(),
     });
 
-    if (nuevoEstado != 'cancelled') return;
+    if (nuevoEstado != 'cancelled' && nuevoEstado != 'completed') return;
 
     final cita = (await referencia.get()).data();
     final fecha = (cita?['date'] as Timestamp?)?.toDate();

@@ -27,7 +27,7 @@ class FilaDuracionCita extends StatelessWidget {
           ),
           const SizedBox(width: 8),
           Text(
-            'Dura ${formatearDuracion(duracion)}',
+            'Tiempo estimado: ${formatearDuracion(duracion)}',
             style: const TextStyle(
               fontSize: 12.5,
               color: TemaApp.grisSubtitulo,

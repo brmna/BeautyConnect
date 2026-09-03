@@ -106,6 +106,7 @@ class _PantallaAgendaProfesionalState extends State<PantallaAgendaProfesional> {
                   return _ListaFranjas(
                     franjas: franjas,
                     fecha: _fechaSeleccionada,
+                    intervalo: horario.intervaloMinutos,
                     onAlternar: _alternarFranja,
                     onAgregar: _agregarFranja,
                   );
@@ -273,12 +274,14 @@ class _AvisoSinHorario extends StatelessWidget {
 class _ListaFranjas extends StatelessWidget {
   final List<FranjaHoraria> franjas;
   final DateTime fecha;
+  final int intervalo;
   final ValueChanged<FranjaHoraria> onAlternar;
   final VoidCallback onAgregar;
 
   const _ListaFranjas({
     required this.franjas,
     required this.fecha,
+    required this.intervalo,
     required this.onAlternar,
     required this.onAgregar,
   });
@@ -353,6 +356,11 @@ class _ListaFranjas extends StatelessWidget {
                   .map(
                     (franja) => _ChipFranja(
                       franja: franja,
+                      enCurso: franjaEnCurso(
+                        fecha: fecha,
+                        hora: franja.hora,
+                        intervalo: intervalo,
+                      ),
                       onTap: () => onAlternar(franja),
                     ),
                   )
@@ -366,9 +374,14 @@ class _ListaFranjas extends StatelessWidget {
 
 class _ChipFranja extends StatelessWidget {
   final FranjaHoraria franja;
+  final bool enCurso;
   final VoidCallback onTap;
 
-  const _ChipFranja({required this.franja, required this.onTap});
+  const _ChipFranja({
+    required this.franja,
+    required this.enCurso,
+    required this.onTap,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -378,9 +391,9 @@ class _ChipFranja extends StatelessWidget {
 
     switch (franja.estado) {
       case EstadoFranja.reservada:
-        fondo = TemaApp.infoSuave;
-        texto = TemaApp.info;
-        etiqueta = 'Reservada';
+        fondo = enCurso ? TemaApp.exitoSuave : TemaApp.infoSuave;
+        texto = enCurso ? TemaApp.exito : TemaApp.info;
+        etiqueta = enCurso ? 'En proceso' : 'Reservada';
       case EstadoFranja.bloqueada:
         fondo = TemaApp.grisBorde;
         texto = TemaApp.grisSubtitulo;

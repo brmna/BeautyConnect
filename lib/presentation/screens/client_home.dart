@@ -14,6 +14,7 @@ import '../../theme/app_theme.dart';
 import '../../utils/estado_cita.dart';
 import '../widgets/aviso.dart';
 import '../widgets/barra_ocultable.dart';
+import '../widgets/boton_novedades.dart';
 import '../widgets/recarga_manual.dart';
 import '../widgets/favoritos_optimistas.dart';
 import '../widgets/tarjeta_diseno.dart';
@@ -239,56 +240,69 @@ class _ClientHomeState extends State<ClientHome>
         color: TemaApp.blanco,
         borderRadius: BorderRadius.circular(24),
       ),
-      child: Column(
+      child: Stack(
         children: [
-          const Icon(Icons.auto_awesome, size: 22),
-          const SizedBox(height: 6),
-          const Text(
-            'Galería de Inspiración',
-            style: TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
-              fontStyle: FontStyle.italic,
+          Positioned(
+            top: -6,
+            right: -6,
+            child: BotonNovedades(
+              uid: _uid,
+              esProfesional: false,
+              onVerCitas: () => widget.onIrAPestana(3),
             ),
           ),
-          const SizedBox(height: 2),
-          const Text(
-            'Explora diseños reales de uñas para tu próxima cita',
-            textAlign: TextAlign.center,
-            style: TextStyle(fontSize: 12, color: TemaApp.grisSubtitulo),
-          ),
-          const SizedBox(height: 14),
-          TextField(
-            controller: _buscadorCtrl,
-            onChanged: (valor) => setState(() => _busqueda = valor),
-            decoration: InputDecoration(
-              hintText: 'Buscar diseños elegantes...',
-              hintStyle: const TextStyle(fontSize: 13),
-              prefixIcon: const Icon(Icons.search, size: 19),
-              suffixIcon: _busqueda.isEmpty
-                  ? null
-                  : IconButton(
-                      icon: const Icon(Icons.close, size: 17),
-                      onPressed: () {
-                        _buscadorCtrl.clear();
-                        setState(() => _busqueda = '');
-                      },
-                    ),
-              filled: true,
-              fillColor: TemaApp.grisClaro,
-              isDense: true,
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(30),
-                borderSide: BorderSide.none,
+          Column(
+            children: [
+              const Icon(Icons.auto_awesome, size: 22),
+              const SizedBox(height: 6),
+              const Text(
+                'Galería de Inspiración',
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                  fontStyle: FontStyle.italic,
+                ),
               ),
-              enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(30),
-                borderSide: BorderSide.none,
+              const SizedBox(height: 2),
+              const Text(
+                'Explora diseños reales de uñas para tu próxima cita',
+                textAlign: TextAlign.center,
+                style: TextStyle(fontSize: 12, color: TemaApp.grisSubtitulo),
               ),
-            ),
+              const SizedBox(height: 14),
+              TextField(
+                controller: _buscadorCtrl,
+                onChanged: (valor) => setState(() => _busqueda = valor),
+                decoration: InputDecoration(
+                  hintText: 'Buscar diseños elegantes...',
+                  hintStyle: const TextStyle(fontSize: 13),
+                  prefixIcon: const Icon(Icons.search, size: 19),
+                  suffixIcon: _busqueda.isEmpty
+                      ? null
+                      : IconButton(
+                          icon: const Icon(Icons.close, size: 17),
+                          onPressed: () {
+                            _buscadorCtrl.clear();
+                            setState(() => _busqueda = '');
+                          },
+                        ),
+                  filled: true,
+                  fillColor: TemaApp.grisClaro,
+                  isDense: true,
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(30),
+                    borderSide: BorderSide.none,
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(30),
+                    borderSide: BorderSide.none,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 10),
+              _BotonFoto(analizando: _analizando, onTocar: _buscarConFoto),
+            ],
           ),
-          const SizedBox(height: 10),
-          _BotonFoto(analizando: _analizando, onTocar: _buscarConFoto),
         ],
       ),
     );
@@ -605,7 +619,11 @@ class _RecordatorioCitasState extends State<_RecordatorioCitas> {
                   confirmadas.add(cita.id);
                 }
               }
-              if (sinVer && estado == 'cancelled') rechazadas.add(cita.id);
+              if (sinVer &&
+                  estado == 'cancelled' &&
+                  datos['canceladaPor'] != 'cliente') {
+                rechazadas.add(cita.id);
+              }
             }
 
             final novedades = [...confirmadas, ...movidas, ...rechazadas];

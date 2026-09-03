@@ -2,6 +2,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../data/auth_repository.dart';
+import '../../data/services/servicio_correos_recientes.dart';
 import '../auth_provider.dart';
 import '../widgets/boton_google.dart';
 import '../../theme/app_theme.dart';
@@ -29,12 +30,47 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
+  final _focoContrasena = FocusNode();
+
+  final _correos = ServicioCorreosRecientes();
+  List<String> _recientes = const [];
+
+  @override
+  void initState() {
+    super.initState();
+    _emailController.addListener(_alEscribirCorreo);
+    _cargarRecientes();
+  }
 
   @override
   void dispose() {
+    _emailController.removeListener(_alEscribirCorreo);
     _emailController.dispose();
     _passwordController.dispose();
+    _focoContrasena.dispose();
     super.dispose();
+  }
+
+  bool _campoVacio = true;
+
+  void _alEscribirCorreo() {
+    final vacio = _emailController.text.trim().isEmpty;
+    if (vacio != _campoVacio) setState(() => _campoVacio = vacio);
+  }
+
+  Future<void> _cargarRecientes() async {
+    final guardados = await _correos.leer();
+    if (mounted) setState(() => _recientes = guardados);
+  }
+
+  void _usarCorreo(String correo) {
+    _emailController.text = correo;
+    _focoContrasena.requestFocus();
+  }
+
+  Future<void> _olvidarCorreo(String correo) async {
+    final quedan = await _correos.olvidar(correo);
+    if (mounted) setState(() => _recientes = quedan);
   }
 
   Future<void> _handleLogin() async {
@@ -113,6 +149,30 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     );
   }
 
+  Widget _cuentasRecientes() {
+    if (_recientes.isEmpty || !_campoVacio) return const SizedBox.shrink();
+
+    return Padding(
+      padding: const EdgeInsets.only(top: 10),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Entraste antes con',
+            style: TextStyle(fontSize: 12, color: TemaApp.grisSubtitulo),
+          ),
+          const SizedBox(height: 4),
+          for (final correo in _recientes)
+            _FilaCorreo(
+              correo: correo,
+              onUsar: () => _usarCorreo(correo),
+              onOlvidar: () => _olvidarCorreo(correo),
+            ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildCard(Responsive r) {
     return Container(
       width: r.cardWidth,
@@ -151,6 +211,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
               validator: validarCorreo,
             ),
 
+            _cuentasRecientes(),
+
             SizedBox(height: r.fieldGap),
 
             BeautyTextField(
@@ -159,6 +221,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
               prefixIcon: Icons.lock_outline,
               isPassword: true,
               controller: _passwordController,
+              focusNode: _focoContrasena,
               validator: validarContrasena,
             ),
 
@@ -228,6 +291,58 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 "¿No tienes cuenta? Regístrate",
                 style: TextStyle(fontWeight: FontWeight.bold),
               ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _FilaCorreo extends StatelessWidget {
+  final String correo;
+  final VoidCallback onUsar;
+  final VoidCallback onOlvidar;
+
+  const _FilaCorreo({
+    required this.correo,
+    required this.onUsar,
+    required this.onOlvidar,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onUsar,
+      borderRadius: BorderRadius.circular(10),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 5),
+        child: Row(
+          children: [
+            const Icon(
+              Icons.account_circle_outlined,
+              size: 18,
+              color: TemaApp.grisTexto,
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                correo,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  fontSize: 13,
+                  color: TemaApp.textoOscuro,
+                ),
+              ),
+            ),
+            IconButton(
+              tooltip: 'Olvidar este correo',
+              onPressed: onOlvidar,
+              visualDensity: VisualDensity.compact,
+              constraints: const BoxConstraints(),
+              padding: const EdgeInsets.all(4),
+              icon: const Icon(Icons.close, size: 15, color: TemaApp.grisTexto),
             ),
           ],
         ),
