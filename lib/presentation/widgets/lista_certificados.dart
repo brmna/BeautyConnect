@@ -118,10 +118,7 @@ Future<void> _confirmarEliminar(
         ),
         TextButton(
           onPressed: () => Navigator.pop(dialogo, true),
-          child: const Text(
-            'Eliminar',
-            style: TextStyle(color: TemaApp.error),
-          ),
+          child: const Text('Eliminar', style: TextStyle(color: TemaApp.error)),
         ),
       ],
     ),

@@ -114,9 +114,7 @@ class TemaApp {
         iconTheme: WidgetStateProperty.resolveWith(
           (estados) => IconThemeData(
             size: 22,
-            color: estados.contains(WidgetState.selected)
-                ? negro
-                : grisTexto,
+            color: estados.contains(WidgetState.selected) ? negro : grisTexto,
           ),
         ),
         labelTextStyle: WidgetStateProperty.resolveWith(
@@ -125,9 +123,7 @@ class TemaApp {
             fontWeight: estados.contains(WidgetState.selected)
                 ? FontWeight.w600
                 : FontWeight.w400,
-            color: estados.contains(WidgetState.selected)
-                ? negro
-                : grisTexto,
+            color: estados.contains(WidgetState.selected) ? negro : grisTexto,
           ),
         ),
       ),

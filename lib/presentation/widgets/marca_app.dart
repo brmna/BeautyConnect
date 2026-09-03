@@ -155,6 +155,8 @@ class _PantallaCargandoState extends State<PantallaCargando>
   Widget build(BuildContext context) {
     return Scaffold(
       body: Container(
+        width: double.infinity,
+        height: double.infinity,
         decoration: const BoxDecoration(
           gradient: LinearGradient(
             begin: Alignment.topLeft,
@@ -172,23 +174,33 @@ class _PantallaCargandoState extends State<PantallaCargando>
                 child: const MarcaBeautyConnect(tamano: 108),
               ),
               const SizedBox(height: 10),
-              const Text(
-                'BeautyConnect',
-                style: TextStyle(
-                  fontSize: 27,
-                  fontWeight: FontWeight.w500,
-                  fontStyle: FontStyle.italic,
-                  color: TemaApp.blanco,
-                  letterSpacing: 0.4,
+              const Padding(
+                padding: EdgeInsets.symmetric(horizontal: 24),
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: Text(
+                    'BeautyConnect',
+                    maxLines: 1,
+                    style: TextStyle(
+                      fontSize: 27,
+                      fontWeight: FontWeight.w500,
+                      fontStyle: FontStyle.italic,
+                      color: TemaApp.blanco,
+                      letterSpacing: 0.4,
+                    ),
+                  ),
                 ),
               ),
               const SizedBox(height: 6),
-              Text(
-                widget.mensaje ?? 'Manicuristas de Villavicencio',
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontSize: 13,
-                  color: TemaApp.blanco.withValues(alpha: 0.85),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 24),
+                child: Text(
+                  widget.mensaje ?? 'Manicuristas de Villavicencio',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: TemaApp.blanco.withValues(alpha: 0.85),
+                  ),
                 ),
               ),
               const Spacer(),
