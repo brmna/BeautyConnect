@@ -127,6 +127,14 @@ Si se omite `dart_defines.json` la app corre igual, solo quedan desactivadas la 
 
 Como cada quien usa su propio proyecto de Firebase, los datos (usuarios, citas, reseñas) no se comparten entre compañeros salvo que trabajen sobre el mismo proyecto de Firebase. Si una credencial llega a publicarse por error, revócala y genera una nueva; las API keys también deberían restringirse por aplicación y por API desde Google Cloud Console.
 
+### 4. Compilar el APK
+
+```bash
+flutter build apk --release --dart-define-from-file=dart_defines.json
+```
+
+El APK queda en `build/app/outputs/flutter-apk/app-release.apk`, listo para copiarlo al celular e instalarlo (hay que permitir "instalar apps de orígenes desconocidos" la primera vez). Con el celular conectado por USB y la depuración activada, también se puede instalar directo con `flutter install` en vez de compilar y luego copiar el archivo.
+
 ## Pruebas
 
 ```bash
