@@ -1,209 +1,112 @@
-# 💅 Beauty App — Guía de Configuración y Firebase
+# BeautyConnect
 
-Aplicación móvil Flutter para gestión de citas de manicuristas independientes en Villavicencio.
+Aplicación móvil en Flutter para conectar manicuristas independientes con clientas en Villavicencio, Meta. Permite buscar profesionales, reservar citas, chatear sobre ellas y calificar el servicio una vez terminado. Es un trabajo de grado de Tecnología en Desarrollo de Software (Uniminuto, Rectoría Orinoquía) y todavía está en fase beta.
 
----
+La app tiene dos roles con navegación y pantallas separadas: cliente y profesional (manicurista). El rol se define al registrarse y determina qué se muestra después de iniciar sesión.
 
-## 📁 Estructura del Proyecto
+## Estructura del proyecto
 
 ```
 lib/
-├── main.dart
-├── main_screen.dart                        
-├── firebase_options.dart
-├── theme/
-│   └── app_theme.dart
-├── utils/
-│   └── responsive.dart
-├── widgets/
-│   ├── beauty_button.dart
-│   ├── beauty_logo.dart
-│   ├── beauty_text_field.dart
-│   └── user_type_selector.dart
+├── main.dart              punto de entrada: inicializa Firebase, idioma es_CO y el tema
+├── main_screen.dart       navegación inferior del cliente
+├── theme/                 tema visual de la app
+├── utils/                 formato de fechas/precios, validaciones, deep links, distancias, etc.
 ├── data/
-│   ├── auth_repository.dart
-│   ├── models/
-│   │   └── professional_model.dart
-│   └── services/
-│       ├── image_service.dart
-│       └── profesional_service.dart
+│   ├── models/             profesional, reseña, horario, modalidad de cita, ubicación...
+│   └── services/           acceso a Firestore, chat, notificaciones, subida de imágenes, IA
 └── presentation/
-    ├── auth_provider.dart
-    ├── auth_wrapper.dart
-    └── screens/
-        ├── login_screen.dart
-        ├── register_screen.dart
-        ├── client_favorites_screen.dart
-        ├── client_appointments_screen.dart
-        ├── client_profile_screen.dart     
-        ├── search_screen.dart
-        ├── professional_detail_screen.dart
-        ├── professional_home.dart
-        ├── professional_agenda_screen.dart
-        ├── professional_services_screen.dart
-        ├── professional_portfolio_screen.dart
-        └── professional_profile_screen.dart
+    ├── screens/             pantallas de cliente y de profesional
+    └── widgets/             componentes reutilizables (hojas modales, tarjetas, calendario...)
 ```
 
----
+## Funcionalidades
 
-## 🔥 Configuración de Firebase
+### Autenticación
 
-### Paso 1 — Autenticación
+Registro e inicio de sesión con correo/contraseña o con Google, verificación de correo obligatoria, recuperación y cambio de contraseña, y cambio de correo (que queda pendiente hasta confirmarse en el buzón nuevo). Un profesional nuevo pasa por un onboarding de tres pasos (ubicación, contacto y especialidades, horario base) antes de poder usar la app.
 
-1. Ve a [Firebase Console](https://console.firebase.google.com) 
-2. **Authentication** → **Sign-in method**
-3. Habilita **Email/Password**
-4. Guarda
+### Cliente
 
----
+- Galería de inspiración con fotos del portafolio de todas las profesionales, con búsqueda por texto, por etiqueta y por foto (usando reconocimiento de imágenes, ver más abajo).
+- Búsqueda de profesionales en lista o en mapa, con filtros por nombre, zona y especialidad, orden por calificación, relevancia o distancia, y opción de escanear el código QR de una profesional.
+- Perfil de cada profesional con información, servicios, portafolio y reseñas, y reserva de cita eligiendo fecha, hora y modalidad (en el local de la profesional o a domicilio, según lo que ella ofrezca).
+- Favoritos, separados en diseños guardados y profesionales guardadas.
+- Mis citas, agrupadas en pendientes, próximas y pasadas, con chat por cita, opción de pedir otro horario sin cancelar, cancelación con motivo y calificación una vez completada la cita.
+- Perfil propio editable (foto, teléfono, bio, género) y vista de las reseñas que ha escrito y recibido.
 
-### Paso 2 — Firestore Database
+### Profesional
 
-1. Ve a **Firestore Database** → **Crear base de datos**
-2. Selecciona **Modo de producción** 
-3. Elige la región 
+- Panel principal con métricas de calificación, solicitudes pendientes, próximas citas y sugerencias para completar el perfil.
+- Agenda de citas: aceptar, rechazar, reagendar, marcar como completadas, responder propuestas de cambio de horario del cliente, y chat con cada clienta.
+- Gestión de servicios (nombre, precio, duración, foto) y de portafolio (fotos con título y etiquetas).
+- Horarios: calendario mensual para bloquear o abrir franjas puntuales, y horario base semanal por día.
+- Lista de clientes atendidos con historial y gasto acumulado por cliente.
+- Certificados y perfil público con especialidades, zona de cobertura, redes sociales y código QR para compartir el perfil.
+- Configuración de disponibilidad (aceptar nuevas citas, auto-aceptar solicitudes, anticipación mínima), de domicilio (zona de cobertura en mapa, recargo) y desactivación de cuenta.
 
-#### Reglas de Firestore
+### Detalles del funcionamiento
 
-Ve a **Firestore** → **Reglas** y pega esto:
+Las reseñas son en ambos sentidos: la clienta califica a la profesional y la profesional también califica a la clienta después de cada cita, y ambos promedios quedan visibles en los perfiles respectivos. Una cita activa se puede reprogramar sin cancelarla mediante una propuesta de cambio que la otra parte acepta o rechaza. En citas a domicilio, la dirección exacta de la clienta solo se revela a la profesional una vez que confirma la cita; antes de eso solo ve una zona aproximada. Desactivar una cuenta la oculta de las búsquedas sin borrar sus datos, y se reactiva sola al volver a iniciar sesión.
 
-```
-rules_version = '2';
-service cloud.firestore {
-  match /databases/{database}/documents {
+El chat, las notificaciones de recordatorio (24 y 2 horas antes de una cita confirmada) y los avisos de cambios de cita se generan automáticamente a partir de lo que pasa con las reservas en Firestore, sin que el usuario tenga que configurarlos.
 
-    // Usuarios: cada uno lee/escribe su propio doc
-    match /users/{userId} {
-      allow read: if request.auth != null;
-      allow write: if request.auth != null && request.auth.uid == userId;
+Los enlaces `beautyconnect://perfil/{id}` se usan para compartir el perfil de una profesional, generar su código QR y abrirlo directamente al escanearlo.
 
-      // Servicios del profesional: cualquier autenticado puede leer
-      match /services/{serviceId} {
-        allow read: if request.auth != null;
-        allow write: if request.auth != null && request.auth.uid == userId;
-      }
+## Servicios externos
 
-      // Portafolio del profesional: cualquier autenticado puede leer
-      match /portfolio/{photoId} {
-        allow read: if request.auth != null;
-        allow write: if request.auth != null && request.auth.uid == userId;
-      }
-    }
+Además de Firebase, la app usa dos servicios opcionales que se activan por variables de entorno en tiempo de compilación. Si no están configurados, la función correspondiente se desactiva con un aviso en vez de romper la app:
 
-    // Citas: el cliente o el profesional pueden leer/escribir
-    match /bookings/{bookingId} {
-      allow read: if request.auth != null &&
-        (resource.data.clientId == request.auth.uid ||
-         resource.data.professionalId == request.auth.uid);
-      allow create: if request.auth != null;
-      allow update: if request.auth != null &&
-        (resource.data.clientId == request.auth.uid ||
-         resource.data.professionalId == request.auth.uid);
-    }
-  }
-}
-```
+- **Gemini** (`GEMINI_API_KEY`, `GEMINI_MODELO`): usado solo en la búsqueda por foto de la galería de inspiración, para identificar si una imagen es de uñas y sugerir etiquetas.
+- **Cloudinary** (`CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_UPLOAD_PRESET`): usado para subir cualquier foto de la app (perfil, servicios, portafolio, certificados, reseñas).
 
----
+El mapa de ubicación y cobertura usa `flutter_map` sobre OpenStreetMap, no requiere clave.
 
-### Paso 3 — Índices de Firestore
+## Configuración de Firebase
 
-Algunos queries requieren índices compuestos. Firebase los solicita automáticamente la primera vez que se ejecuta la query (aparece un link en el log de debug). Para crearlos manualmente:
+### Autenticación
 
-Ve a **Firestore** → **Índices** → **Agregar índice**:
+1. En [Firebase Console](https://console.firebase.google.com), entra a Authentication → Sign-in method.
+2. Habilita Email/Password.
+3. Si vas a usar el inicio de sesión con Google, habilita también el proveedor de Google y registra el SHA-1 de tu keystore en la configuración de la app Android.
 
-| Colección | Campo 1 | Campo 2 | Orden |
-|-----------|---------|---------|-------|
-| `bookings` | `professionalId` (Ascendente) | `date` (Ascendente) | — |
-| `bookings` | `professionalId` (Ascendente) | `status` (Ascendente) | — |
-| `bookings` | `clientId` (Ascendente) | `createdAt` (Descendente) | — |
-| `users/*/services` | `createdAt` (Ascendente) | — | — |
-| `users/*/portfolio` | `createdAt` (Descendente) | — | — |
+### Firestore
 
-> **Alternativa rápida:** ejecuta la app en debug y cuando aparezca el error de índice en la consola, haz click en el link que aparece — te lleva directo a crearlo en Firebase.
+Crea la base de datos en modo de producción y en la región que prefieras. Las reglas de seguridad ya están en [`firestore.rules`](firestore.rules) en la raíz del proyecto; despliégalas con `firebase deploy --only firestore:rules` o pégalas manualmente en Firestore → Reglas.
 
----
+Algunas consultas necesitan índices compuestos. Firebase los pide automáticamente la primera vez que se ejecuta una consulta nueva: el error en el log de debug trae un enlace que crea el índice directo en la consola. Los que se usan desde el inicio son:
 
-## 📦 Dependencias — Agregar a pubspec.yaml
+| Colección | Campos |
+|---|---|
+| `bookings` | `professionalId` asc, `date` asc |
+| `bookings` | `professionalId` asc, `status` asc |
+| `bookings` | `clientId` asc, `createdAt` desc |
+| `users/*/services` | `createdAt` asc |
+| `users/*/portfolio` | `createdAt` desc |
 
-Agrega `intl` si no está:
-
-```yaml
-dependencies:
-  intl: ^0.19.0
-  # ... resto de dependencias existentes
-```
-
-Luego ejecuta:
-```bash
-flutter pub get
-```
-
----
-
-## 🚀 Funcionalidades Implementadas
-
-### Para Clientes
-- ✅ Registro e inicio de sesión
-- ✅ Galería de inspiración
-- ✅ Búsqueda de manicuristas por nombre o zona
-- ✅ Ver perfil detallado del profesional (foto, servicios, portafolio)
-- ✅ **Reservar cita** con fecha y hora
-- ✅ **Favoritos** — guardar/quitar profesionales favoritos
-- ✅ **Mis Citas** — ver estado, cancelar citas pendientes
-- ✅ **Perfil** — editar nombre, teléfono; cerrar sesión
-
-### Para Manicuristas (Profesionales)
-- ✅ Registro e inicio de sesión como profesional
-- ✅ **Agenda** — citas pendientes, confirmadas, historial
-- ✅ **Gestión de citas** — confirmar, rechazar, marcar completadas
-- ✅ **Servicios** — agregar, editar, eliminar servicios con precio y duración
-- ✅ **Portafolio** — agregar/eliminar fotos de trabajos
-- ✅ **Perfil** — editar nombre, ubicación, bio, especialidades, foto; estadísticas; cerrar sesión
-
----
-
-## P.
-
-- La app redirige automáticamente según el rol (`client` → MainScreen, `professional` → ProfessionalHome)
-- Las fotos del portafolio se ingresan por URL (para agregar upload de imágenes, configurar **Firebase Storage** — ver abajo)
-
-### Configurar Firebase Storage (opcional — para subir fotos reales)
-
-1. Firebase Console → **Storage** → **Comenzar**
-2. Selecciona modo de producción
-3. Reglas de Storage:
-```
-rules_version = '2';
-service firebase.storage {
-  match /b/{bucket}/o {
-    match /portfolio/{userId}/{allPaths=**} {
-      allow read: if request.auth != null;
-      allow write: if request.auth != null && request.auth.uid == userId;
-    }
-    match /profiles/{userId}/{allPaths=**} {
-      allow read: if request.auth != null;
-      allow write: if request.auth != null && request.auth.uid == userId;
-    }
-  }
-}
-```
-4. Agrega `firebase_storage` al pubspec y actualiza `image_service.dart`
-
----
-
-## 📱 Cómo Ejecutar
+## Cómo ejecutar
 
 ```bash
 flutter pub get
-flutter run --dart-define=PEXELS_API_KEY=tu_clave_de_pexels
+flutter run \
+  --dart-define=GEMINI_API_KEY=tu_clave \
+  --dart-define=CLOUDINARY_CLOUD_NAME=tu_nube \
+  --dart-define=CLOUDINARY_UPLOAD_PRESET=tu_preset
 ```
 
-Las configuraciones de Firebase y las claves de servicios externos son locales y están excluidas de Git. Para preparar una copia nueva del proyecto:
+Los `--dart-define` son opcionales para correr la app; sin ellos simplemente la búsqueda por foto y la subida de imágenes quedan desactivadas.
 
-1. Ejecuta `flutterfire configure` con acceso al proyecto Firebase y conserva los archivos generados localmente.
-2. Descarga `android/app/google-services.json` desde Firebase Console.
-3. Ejecuta la app pasando la clave de Pexels mediante `--dart-define`; no la escribas en el código.
+Las configuraciones de Firebase (`lib/firebase_options.dart` y `android/app/google-services.json`) son locales y están excluidas de git. Para preparar una copia nueva del proyecto:
 
-Si una credencial ya fue publicada, revócala y genera una nueva. Las API keys de Firebase también deben tener restricciones por aplicación y API desde Google Cloud Console.
+1. Instala `flutterfire_cli` (`dart pub global activate flutterfire_cli`) y ejecuta `flutterfire configure` con acceso al proyecto de Firebase.
+2. Verifica que `android/app/google-services.json` haya quedado en su sitio; si no, descárgalo desde Firebase Console.
+
+Si una credencial llegó a publicarse por error, revócala y genera una nueva. Las API keys de Firebase también deberían restringirse por aplicación y por API desde Google Cloud Console.
+
+## Pruebas
+
+```bash
+flutter test
+```
+
+Hay pruebas unitarias para la lógica que no depende de Firebase ni de la UI: validaciones, formato, cálculo de distancias, estados de cita, deep links, reseñas, disponibilidad, mensajes de error de autenticación, entre otras, en la carpeta `test/`.
