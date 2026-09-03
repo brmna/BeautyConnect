@@ -359,4 +359,92 @@ void pruebasDeTramosOcupados() {
       expect(franjas.every((f) => f.estaLibre), isTrue);
     });
   });
+
+  group('franjaEnCurso', () {
+    final dia = DateTime(2026, 9, 3);
+
+    test('la franja que contiene el momento actual esta en curso', () {
+      final enCurso = franjaEnCurso(
+        fecha: dia,
+        hora: '10:00',
+        intervalo: 60,
+        ahora: DateTime(2026, 9, 3, 10, 30),
+      );
+
+      expect(enCurso, isTrue);
+    });
+
+    test('justo al empezar ya cuenta como en curso', () {
+      final enCurso = franjaEnCurso(
+        fecha: dia,
+        hora: '10:00',
+        intervalo: 60,
+        ahora: DateTime(2026, 9, 3, 10, 0),
+      );
+
+      expect(enCurso, isTrue);
+    });
+
+    test('justo al terminar ya no esta en curso', () {
+      final enCurso = franjaEnCurso(
+        fecha: dia,
+        hora: '10:00',
+        intervalo: 60,
+        ahora: DateTime(2026, 9, 3, 11, 0),
+      );
+
+      expect(enCurso, isFalse);
+    });
+
+    test('una franja que todavia no empieza no esta en curso', () {
+      final enCurso = franjaEnCurso(
+        fecha: dia,
+        hora: '15:00',
+        intervalo: 60,
+        ahora: DateTime(2026, 9, 3, 10, 30),
+      );
+
+      expect(enCurso, isFalse);
+    });
+
+    test('otro dia a la misma hora no esta en curso', () {
+      final enCurso = franjaEnCurso(
+        fecha: dia.add(const Duration(days: 1)),
+        hora: '10:00',
+        intervalo: 60,
+        ahora: DateTime(2026, 9, 3, 10, 30),
+      );
+
+      expect(enCurso, isFalse);
+    });
+
+    test('sin intervalo valido se asume media hora', () {
+      final dentro = franjaEnCurso(
+        fecha: dia,
+        hora: '10:00',
+        intervalo: 0,
+        ahora: DateTime(2026, 9, 3, 10, 20),
+      );
+      final fuera = franjaEnCurso(
+        fecha: dia,
+        hora: '10:00',
+        intervalo: 0,
+        ahora: DateTime(2026, 9, 3, 10, 40),
+      );
+
+      expect(dentro, isTrue);
+      expect(fuera, isFalse);
+    });
+
+    test('una hora con formato roto no rompe nada', () {
+      final enCurso = franjaEnCurso(
+        fecha: dia,
+        hora: 'abc',
+        intervalo: 60,
+        ahora: DateTime(2026, 9, 3, 10, 30),
+      );
+
+      expect(enCurso, isFalse);
+    });
+  });
 }

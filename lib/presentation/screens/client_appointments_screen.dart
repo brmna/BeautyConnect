@@ -13,6 +13,7 @@ import '../../theme/app_theme.dart';
 import '../../utils/estado_cita.dart';
 import '../../utils/formato.dart';
 import '../../utils/franjas_cita.dart';
+import '../widgets/boton_novedades.dart';
 import '../widgets/cabecera_pantalla.dart';
 import '../widgets/confirmacion.dart';
 import '../../data/services/servicio_chat.dart';
@@ -95,7 +96,13 @@ class _ClientAppointmentsScreenState extends State<ClientAppointmentsScreen>
               titulo: 'Mis Citas',
               subtitulo: 'Administra tus reservaciones',
               icono: Icons.calendar_month_outlined,
-              accion: _botonMensajes(),
+              accion: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  BotonNovedades(uid: _uid, esProfesional: false),
+                  _botonMensajes(),
+                ],
+              ),
             ),
             Expanded(
               child: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(

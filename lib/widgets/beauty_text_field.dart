@@ -9,6 +9,7 @@ class BeautyTextField extends StatefulWidget {
   final bool isPassword;
   final TextInputType keyboardType;
   final TextEditingController? controller;
+  final FocusNode? focusNode;
   final String? Function(String?)? validator;
 
   const BeautyTextField({
@@ -19,6 +20,7 @@ class BeautyTextField extends StatefulWidget {
     this.isPassword = false,
     this.keyboardType = TextInputType.text,
     this.controller,
+    this.focusNode,
     this.validator,
   });
 
@@ -27,7 +29,7 @@ class BeautyTextField extends StatefulWidget {
 }
 
 class _BeautyTextFieldState extends State<BeautyTextField> {
-  final _foco = FocusNode();
+  late final FocusNode _foco = widget.focusNode ?? FocusNode();
   bool _obscure = true;
   bool _enfocado = false;
   bool _conError = false;
@@ -40,7 +42,7 @@ class _BeautyTextFieldState extends State<BeautyTextField> {
 
   @override
   void dispose() {
-    _foco.dispose();
+    if (widget.focusNode == null) _foco.dispose();
     super.dispose();
   }
 

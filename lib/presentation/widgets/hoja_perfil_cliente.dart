@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../data/services/servicio_clientes.dart';
+import '../screens/chat_screen.dart';
 import 'hoja_modal.dart';
 import '../../data/services/servicio_resenas_clientes.dart';
 import '../../theme/app_theme.dart';
@@ -162,14 +163,17 @@ class HojaPerfilCliente extends StatelessWidget {
           ),
           const SizedBox(height: 14),
         ],
-        if (telefono.isEmpty)
-          const Text(
-            'No registró un teléfono de contacto',
-            style: TextStyle(fontSize: 12.5, color: TemaApp.grisTexto),
-          )
-        else ...[
-          Row(
-            children: [
+        Row(
+          children: [
+            Expanded(
+              child: FilledButton.icon(
+                onPressed: () => _abrirChat(context, datos),
+                icon: const Icon(Icons.chat_bubble_outline, size: 17),
+                label: const Text('Escribir'),
+              ),
+            ),
+            if (telefono.isNotEmpty) ...[
+              const SizedBox(width: 10),
               Expanded(
                 child: OutlinedButton.icon(
                   onPressed: () => _abrir(context, 'tel', telefono),
@@ -177,17 +181,16 @@ class HojaPerfilCliente extends StatelessWidget {
                   label: const Text('Llamar'),
                 ),
               ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: OutlinedButton.icon(
-                  onPressed: () => _abrirWhatsapp(context, telefono),
-                  icon: const Icon(Icons.chat_outlined, size: 17),
-                  label: const Text('WhatsApp'),
-                ),
-              ),
             ],
-          ),
-          const SizedBox(height: 8),
+          ],
+        ),
+        const SizedBox(height: 8),
+        if (telefono.isEmpty)
+          const Text(
+            'No registró un teléfono de contacto',
+            style: TextStyle(fontSize: 12.5, color: TemaApp.grisTexto),
+          )
+        else ...[
           Align(
             alignment: Alignment.centerLeft,
             child: TextButton.icon(
@@ -226,21 +229,54 @@ class HojaPerfilCliente extends StatelessWidget {
     }
   }
 
-  Future<void> _abrirWhatsapp(BuildContext context, String telefono) async {
+  Future<void> _abrirChat(
+    BuildContext context,
+    Map<String, dynamic> datos,
+  ) async {
     final mensajero = ScaffoldMessenger.of(context);
-    var numero = _soloDigitos(telefono).replaceAll('+', '');
-    if (numero.length == 10) numero = '57$numero';
+    final navegador = Navigator.of(context);
 
-    final abierto = await launchUrl(
-      Uri.parse('https://wa.me/$numero'),
-      mode: LaunchMode.externalApplication,
-    );
+    final consulta = await FirebaseFirestore.instance
+        .collection('bookings')
+        .where('professionalId', isEqualTo: profesionalId)
+        .where('clientId', isEqualTo: clienteId)
+        .get();
 
-    if (!abierto) {
+    final citas = consulta.docs.toList()
+      ..sort((a, b) {
+        final fechaA = (a.data()['date'] as Timestamp?)?.toDate();
+        final fechaB = (b.data()['date'] as Timestamp?)?.toDate();
+        if (fechaA == null || fechaB == null) return 0;
+        return fechaB.compareTo(fechaA);
+      });
+
+    if (citas.isEmpty) {
       mensajero.showSnackBar(
-        construirMensaje('No se pudo abrir WhatsApp', tipo: TipoAviso.error),
+        construirMensaje(
+          'La conversación vive en la cita, y todavía no tienen ninguna',
+          tipo: TipoAviso.info,
+        ),
       );
+      return;
     }
+
+    final cita = citas.first;
+    final nombre = (datos['name'] as String?)?.trim() ?? '';
+
+    navegador.pop();
+    navegador.push(
+      MaterialPageRoute(
+        builder: (_) => ChatScreen(
+          citaId: cita.id,
+          clienteId: clienteId,
+          profesionalId: profesionalId,
+          servicio: cita.data()['serviceName'] ?? 'Servicio',
+          otroNombre: nombre.isEmpty ? 'Cliente' : nombre,
+          otraFoto: datos['photoUrl'] as String?,
+          esProfesional: true,
+        ),
+      ),
+    );
   }
 }
 

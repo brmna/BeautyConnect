@@ -19,6 +19,7 @@ import '../widgets/lista_certificados.dart';
 import '../widgets/redes_sociales.dart';
 import '../../theme/app_theme.dart';
 import '../widgets/corazon_animado.dart';
+import 'chat_screen.dart';
 import 'detalle_diseno_screen.dart';
 import 'selector_ubicacion_screen.dart';
 import '../../utils/formato.dart';
@@ -369,18 +370,104 @@ class _ProfessionalDetailScreenState extends State<ProfessionalDetailScreen>
                 ),
               ),
             ],
-            if (telefono != null && telefono.isNotEmpty) ...[
-              const SizedBox(height: 16),
-              SizedBox(
-                width: double.infinity,
-                child: OutlinedButton.icon(
-                  onPressed: () => _llamar(telefono),
-                  icon: const Icon(Icons.phone_outlined, size: 18),
-                  label: const Text('Llamar'),
-                ),
-              ),
-            ],
+            _contacto(datos, telefono),
           ],
+        ),
+      ),
+    );
+  }
+
+  Widget _contacto(Map<String, dynamic> datos, String? telefono) {
+    final hayTelefono = telefono != null && telefono.isNotEmpty;
+    final miUid = FirebaseAuth.instance.currentUser?.uid ?? '';
+
+    if (miUid.isEmpty) {
+      if (!hayTelefono) return const SizedBox.shrink();
+      return _filaContacto(llamar: telefono, chat: null, datos: datos);
+    }
+
+    return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+      stream: FirebaseFirestore.instance
+          .collection('bookings')
+          .where('professionalId', isEqualTo: widget.professionalId)
+          .where('clientId', isEqualTo: miUid)
+          .snapshots(),
+      builder: (context, instantanea) {
+        final citas = (instantanea.data?.docs ?? const []).toList()
+          ..sort((a, b) {
+            final fechaA = (a.data()['date'] as Timestamp?)?.toDate();
+            final fechaB = (b.data()['date'] as Timestamp?)?.toDate();
+            if (fechaA == null || fechaB == null) return 0;
+            return fechaB.compareTo(fechaA);
+          });
+
+        if (citas.isEmpty && !hayTelefono) return const SizedBox.shrink();
+
+        return _filaContacto(
+          llamar: hayTelefono ? telefono : null,
+          chat: citas.isEmpty ? null : citas.first,
+          datos: datos,
+        );
+      },
+    );
+  }
+
+  Widget _filaContacto({
+    required String? llamar,
+    required QueryDocumentSnapshot<Map<String, dynamic>>? chat,
+    required Map<String, dynamic> datos,
+  }) {
+    final botones = <Widget>[
+      if (chat != null)
+        Expanded(
+          child: FilledButton.icon(
+            onPressed: () => _abrirChat(chat, datos),
+            icon: const Icon(Icons.chat_bubble_outline, size: 18),
+            label: const Text('Escribir'),
+          ),
+        ),
+      if (llamar != null)
+        Expanded(
+          child: OutlinedButton.icon(
+            onPressed: () => _llamar(llamar),
+            icon: const Icon(Icons.phone_outlined, size: 18),
+            label: const Text('Llamar'),
+          ),
+        ),
+    ];
+
+    if (botones.isEmpty) return const SizedBox.shrink();
+
+    return Padding(
+      padding: const EdgeInsets.only(top: 16),
+      child: Row(
+        children: [
+          for (var i = 0; i < botones.length; i++) ...[
+            if (i > 0) const SizedBox(width: 10),
+            botones[i],
+          ],
+        ],
+      ),
+    );
+  }
+
+  void _abrirChat(
+    QueryDocumentSnapshot<Map<String, dynamic>> cita,
+    Map<String, dynamic> datos,
+  ) {
+    final nombre = (datos['name'] as String?)?.trim() ?? '';
+
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => ChatScreen(
+          citaId: cita.id,
+          clienteId: cita.data()['clientId'] ?? '',
+          profesionalId: widget.professionalId,
+          servicio: cita.data()['serviceName'] ?? 'Servicio',
+          otroNombre: nombre.isEmpty ? 'Manicurista' : nombre,
+          otraFoto: datos['photoUrl'] as String?,
+          esProfesional: false,
         ),
       ),
     );
@@ -796,13 +883,15 @@ class _PestanaServicios extends StatelessWidget {
                                 color: TemaApp.grisTexto,
                               ),
                               const SizedBox(width: 4),
-                              Text(
-                                formatearDuracionCorta(
-                                  (servicio['duration'] as num?)?.toInt() ?? 0,
-                                ),
-                                style: const TextStyle(
-                                  fontSize: 12,
-                                  color: TemaApp.grisSubtitulo,
+                              Flexible(
+                                child: Text(
+                                  '${formatearDuracionCorta((servicio['duration'] as num?)?.toInt() ?? 0)} aprox.',
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: const TextStyle(
+                                    fontSize: 12,
+                                    color: TemaApp.grisSubtitulo,
+                                  ),
                                 ),
                               ),
                               const SizedBox(width: 12),
@@ -1429,7 +1518,7 @@ class _BookingSheetState extends State<_BookingSheet> {
                 ),
               ),
               Text(
-                '${formatearPrecio(precio)}  -  ${formatearDuracion(duracion)}',
+                '${formatearPrecio(precio)}  -  ${formatearDuracion(duracion)} aprox.',
                 style: const TextStyle(
                   color: TemaApp.grisSubtitulo,
                   fontSize: 13,
@@ -1693,7 +1782,7 @@ class _FilaServicio extends StatelessWidget {
                 ),
                 Text(
                   '${formatearPrecio(servicio['price'] as num?)}  ·  '
-                  '${formatearDuracionCorta(duracion)}',
+                  '${formatearDuracionCorta(duracion)} aprox.',
                   style: const TextStyle(
                     fontSize: 12,
                     color: TemaApp.grisSubtitulo,

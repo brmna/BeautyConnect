@@ -114,7 +114,7 @@ class ProfessionalServicesScreen extends StatelessWidget {
                             color: TemaApp.grisTexto,
                           ),
                           Text(
-                            '  ${formatearDuracionCorta((data['duration'] as num?)?.toInt() ?? 0)}',
+                            '  ${formatearDuracionCorta((data['duration'] as num?)?.toInt() ?? 0)} aprox.',
                             style: const TextStyle(
                               fontSize: 12,
                               color: TemaApp.grisSubtitulo,
@@ -445,7 +445,7 @@ class _ServiceFormSheetState extends State<_ServiceFormSheet> {
                   child: TextFormField(
                     controller: _durationCtrl,
                     decoration: InputDecoration(
-                      labelText: 'Duración (min)',
+                      labelText: 'Duración estimada (min)',
                       helperText: _duracionEnPalabras,
                       helperStyle: const TextStyle(
                         fontSize: 11,

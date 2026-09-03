@@ -8,6 +8,7 @@ import '../../utils/estado_cita.dart';
 import '../../utils/formato.dart';
 import '../../utils/genero.dart';
 import '../widgets/aviso.dart';
+import '../widgets/boton_novedades.dart';
 import '../widgets/recarga_manual.dart';
 import '../widgets/sugerencias.dart';
 import 'mis_resenas_screen.dart';
@@ -147,21 +148,35 @@ class _DashboardProfesionalScreenState extends State<DashboardProfesionalScreen>
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(4, 8, 4, 0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      child: Row(
         children: [
-          const Text(
-            'Dashboard',
-            style: TextStyle(
-              fontSize: 24,
-              fontWeight: FontWeight.bold,
-              fontStyle: FontStyle.italic,
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Dashboard',
+                  style: TextStyle(
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                    fontStyle: FontStyle.italic,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  saludoBienvenida(genero, nombre: primerNombre),
+                  style: const TextStyle(
+                    fontSize: 13,
+                    color: TemaApp.grisSubtitulo,
+                  ),
+                ),
+              ],
             ),
           ),
-          const SizedBox(height: 2),
-          Text(
-            saludoBienvenida(genero, nombre: primerNombre),
-            style: const TextStyle(fontSize: 13, color: TemaApp.grisSubtitulo),
+          BotonNovedades(
+            uid: _uid,
+            esProfesional: true,
+            onVerCitas: () => onIr(DestinoProfesional.citas),
           ),
         ],
       ),

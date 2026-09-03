@@ -95,6 +95,26 @@ class FranjaHoraria {
   bool get estaLibre => estado == EstadoFranja.libre;
 }
 
+bool franjaEnCurso({
+  required DateTime fecha,
+  required String hora,
+  required int intervalo,
+  DateTime? ahora,
+}) {
+  final partes = hora.split(':');
+  if (partes.length < 2) return false;
+
+  final horas = int.tryParse(partes[0]);
+  final minutos = int.tryParse(partes[1]);
+  if (horas == null || minutos == null) return false;
+
+  final inicio = DateTime(fecha.year, fecha.month, fecha.day, horas, minutos);
+  final fin = inicio.add(Duration(minutes: intervalo > 0 ? intervalo : 30));
+  final momento = ahora ?? DateTime.now();
+
+  return !momento.isBefore(inicio) && momento.isBefore(fin);
+}
+
 class TramoOcupado {
   final String inicio;
   final String fin;
