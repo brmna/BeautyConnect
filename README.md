@@ -86,22 +86,46 @@ Algunas consultas necesitan índices compuestos. Firebase los pide automáticame
 
 ## Cómo ejecutar
 
+Ni las credenciales de Firebase ni las de Gemini/Cloudinary están en el repositorio; cada persona que clona el proyecto configura las suyas.
+
+### 1. Firebase
+
+1. Crea un proyecto en [Firebase Console](https://console.firebase.google.com)
+2. Habilita Authentication → Email/Password. Si vas a probar el inicio de sesión con Google, habilita también ese proveedor.
+3. Crea la base de datos de Firestore, en modo producción.
+4. Instala las herramientas y genera tu propio `lib/firebase_options.dart` y `android/app/google-services.json`:
+
 ```bash
-flutter pub get
-flutter run \
-  --dart-define=GEMINI_API_KEY=tu_clave \
-  --dart-define=CLOUDINARY_CLOUD_NAME=tu_nube \
-  --dart-define=CLOUDINARY_UPLOAD_PRESET=tu_preset
+npm install -g firebase-tools
+dart pub global activate flutterfire_cli
+firebase login
+flutterfire configure --project=tu-project-id --platforms=android
 ```
 
-Los `--dart-define` son opcionales para correr la app; sin ellos simplemente la búsqueda por foto y la subida de imágenes quedan desactivadas.
+5. Despliega las reglas ya incluidas en el repo: `firebase deploy --only firestore:rules`.
+6. Para que el login con Google funcione en tu propio equipo, agrega el SHA-1 de tu keystore de debug en Firebase Console → configuración del proyecto → tu app Android → Agregar huella digital. Lo obtienes con:
 
-Las configuraciones de Firebase (`lib/firebase_options.dart` y `android/app/google-services.json`) son locales y están excluidas de git. Para preparar una copia nueva del proyecto:
+```bash
+keytool -list -v -keystore %USERPROFILE%\.android\debug.keystore -alias androiddebugkey -storepass android -keypass android
+```
 
-1. Instala `flutterfire_cli` (`dart pub global activate flutterfire_cli`) y ejecuta `flutterfire configure` con acceso al proyecto de Firebase.
-2. Verifica que `android/app/google-services.json` haya quedado en su sitio; si no, descárgalo desde Firebase Console.
+### 2. Gemini y Cloudinary
 
-Si una credencial llegó a publicarse por error, revócala y genera una nueva. Las API keys de Firebase también deberían restringirse por aplicación y por API desde Google Cloud Console.
+Copia `dart_defines.example.json` a `dart_defines.json` (ya está en `.gitignore`) y completa tus propios valores:
+
+- `CLOUDINARY_CLOUD_NAME` y `CLOUDINARY_UPLOAD_PRESET`: crea una cuenta gratuita en [Cloudinary](https://cloudinary.com), y en Settings → Upload crea un upload preset en modo **Unsigned**.
+- `GEMINI_API_KEY`: genera una clave gratuita en [Google AI Studio](https://aistudio.google.com/apikey).
+
+### 3. Ejecutar
+
+```bash
+flutter pub get
+flutter run --dart-define-from-file=dart_defines.json
+```
+
+Si se omite `dart_defines.json` la app corre igual, solo quedan desactivadas la búsqueda por foto y la subida de imágenes.
+
+Como cada quien usa su propio proyecto de Firebase, los datos (usuarios, citas, reseñas) no se comparten entre compañeros salvo que trabajen sobre el mismo proyecto de Firebase. Si una credencial llega a publicarse por error, revócala y genera una nueva; las API keys también deberían restringirse por aplicación y por API desde Google Cloud Console.
 
 ## Pruebas
 
