@@ -105,7 +105,7 @@ class TemaApp {
       ),
       navigationBarTheme: NavigationBarThemeData(
         backgroundColor: blanco,
-        indicatorColor: rosaSuave,
+        indicatorColor: grisClaro,
         surfaceTintColor: Colors.transparent,
         shadowColor: Colors.black26,
         elevation: 8,
