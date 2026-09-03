@@ -193,12 +193,13 @@ class _PantallaCargandoState extends State<PantallaCargando>
               ),
               const Spacer(),
               SizedBox(
-                width: 120,
-                child: LinearProgressIndicator(
-                  minHeight: 3,
-                  borderRadius: BorderRadius.circular(3),
-                  backgroundColor: TemaApp.blanco.withValues(alpha: 0.25),
-                  valueColor: const AlwaysStoppedAnimation(TemaApp.blanco),
+                width: 22,
+                height: 22,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2.4,
+                  valueColor: AlwaysStoppedAnimation(
+                    TemaApp.blanco.withValues(alpha: 0.85),
+                  ),
                 ),
               ),
               const SizedBox(height: 40),

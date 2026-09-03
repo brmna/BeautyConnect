@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import '../../theme/app_theme.dart';
 import '../../utils/mensajes_auth.dart';
 import '../widgets/mensaje.dart';
+import 'recuperar_contrasena_screen.dart';
 
 class CambiarContrasenaScreen extends StatefulWidget {
   const CambiarContrasenaScreen({super.key});
@@ -139,7 +140,27 @@ class _CambiarContrasenaScreenState extends State<CambiarContrasenaScreen> {
                           ? 'Ingresa tu contraseña actual'
                           : null,
                     ),
-                    const SizedBox(height: 14),
+                    Align(
+                      alignment: Alignment.centerRight,
+                      child: TextButton(
+                        onPressed: () => Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => RecuperarContrasenaScreen(
+                              correoInicial:
+                                  FirebaseAuth.instance.currentUser?.email ??
+                                  '',
+                            ),
+                          ),
+                        ),
+                        style: TextButton.styleFrom(
+                          padding: EdgeInsets.zero,
+                          minimumSize: const Size(0, 30),
+                        ),
+                        child: const Text('¿Olvidaste tu contraseña actual?'),
+                      ),
+                    ),
+                    const SizedBox(height: 6),
                     _campo(
                       controlador: _nuevaCtrl,
                       etiqueta: 'Nueva contraseña',

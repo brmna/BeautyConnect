@@ -7,6 +7,7 @@ import '../../data/services/servicio_subida_imagenes.dart';
 import '../../theme/app_theme.dart';
 import '../widgets/campo_correo.dart';
 import '../widgets/campo_telefono.dart';
+import '../widgets/hoja_modal.dart';
 import '../widgets/redes_sociales.dart';
 import 'selector_ubicacion_screen.dart';
 import '../../utils/genero.dart';
@@ -119,6 +120,46 @@ class _EditarPerfilProfesionalScreenState
     }
 
     if (mounted) setState(() => _subiendoFoto = false);
+  }
+
+  Future<void> _abrirOpcionesFoto() async {
+    final tieneFoto = _fotoUrl != null && _fotoUrl!.isNotEmpty;
+
+    final accion = await abrirHoja<String>(
+      context,
+      hijo: Builder(
+        builder: (contexto) => SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const SizedBox(height: 8),
+              ListTile(
+                leading: const Icon(Icons.photo_camera_outlined),
+                title: const Text('Cambiar foto'),
+                onTap: () => Navigator.pop(contexto, 'cambiar'),
+              ),
+              if (tieneFoto)
+                ListTile(
+                  leading: const Icon(
+                    Icons.delete_outline,
+                    color: TemaApp.error,
+                  ),
+                  title: const Text(
+                    'Quitar foto',
+                    style: TextStyle(color: TemaApp.error),
+                  ),
+                  onTap: () => Navigator.pop(contexto, 'quitar'),
+                ),
+              const SizedBox(height: 8),
+            ],
+          ),
+        ),
+      ),
+    );
+
+    if (!mounted) return;
+    if (accion == 'cambiar') await _cambiarFoto();
+    if (accion == 'quitar') setState(() => _fotoUrl = null);
   }
 
   Future<void> _guardar() async {
@@ -283,7 +324,7 @@ class _EditarPerfilProfesionalScreenState
         child: Column(
           children: [
             GestureDetector(
-              onTap: _subiendoFoto ? null : _cambiarFoto,
+              onTap: _subiendoFoto ? null : _abrirOpcionesFoto,
               child: Stack(
                 children: [
                   CircleAvatar(

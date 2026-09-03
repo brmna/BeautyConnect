@@ -26,13 +26,15 @@ class ClientFavoritesScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final alturaCabecera = 142 + MediaQuery.paddingOf(context).top;
+
     return DefaultTabController(
       length: 2,
       child: Scaffold(
         backgroundColor: TemaApp.grisClaro,
-        appBar: const PreferredSize(
-          preferredSize: Size.fromHeight(142),
-          child: Column(
+        appBar: PreferredSize(
+          preferredSize: Size.fromHeight(alturaCabecera),
+          child: const Column(
             children: [
               CabeceraPantalla(
                 titulo: 'Favoritos',
