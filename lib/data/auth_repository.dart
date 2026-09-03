@@ -2,6 +2,8 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 
+import 'services/servicio_correos_recientes.dart';
+
 class GoogleNoConfigurado implements Exception {
   const GoogleNoConfigurado();
 }
@@ -9,6 +11,7 @@ class GoogleNoConfigurado implements Exception {
 class AuthRepository {
   final _auth = FirebaseAuth.instance;
   final _firestore = FirebaseFirestore.instance;
+  final _correos = ServicioCorreosRecientes();
 
   Stream<User?> authState() => _auth.authStateChanges();
 
@@ -37,6 +40,7 @@ class AuthRepository {
       rethrow;
     }
 
+    await _correos.recordar(email);
     await enviarVerificacion();
   }
 
@@ -64,6 +68,7 @@ class AuthRepository {
 
   Future<void> login({required String email, required String password}) async {
     await _auth.signInWithEmailAndPassword(email: email, password: password);
+    await _correos.recordar(email);
   }
 
   Future<void> enviarRecuperacion(String correo) {
@@ -96,6 +101,8 @@ class AuthRepository {
     final resultado = await _auth.signInWithCredential(credencial);
     final usuario = resultado.user;
     if (usuario == null) return false;
+
+    await _correos.recordar(cuenta.email);
 
     final referencia = _firestore.collection('users').doc(usuario.uid);
     if ((await referencia.get()).exists) return true;
