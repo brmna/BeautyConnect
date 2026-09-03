@@ -1,0 +1,4 @@
+{
+  "CLOUDINARY_CLOUD_NAME": "cloud name del panel de Cloudinary",
+  "CLOUDINARY_UPLOAD_PRESET": "nombre del upload preset en modo Unsigned"
+}
