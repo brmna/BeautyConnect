@@ -1,16 +1,21 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
+import '../../utils/estado_cita.dart';
+
 class VisitaCliente {
   final String servicio;
   final DateTime fecha;
   final num precio;
   final String estado;
 
+  final bool caducada;
+
   const VisitaCliente({
     required this.servicio,
     required this.fecha,
     required this.precio,
     required this.estado,
+    this.caducada = false,
   });
 }
 
@@ -35,7 +40,8 @@ class ResumenCliente {
 
   int get atendidas => visitas.where((v) => v.estado == 'completed').length;
 
-  int get canceladas => visitas.where((v) => v.estado == 'cancelled').length;
+  int get canceladas =>
+      visitas.where((v) => v.estado == 'cancelled' && !v.caducada).length;
 
   num get totalGastado => visitas
       .where((v) => v.estado == 'completed')
@@ -109,6 +115,7 @@ class ServicioClientes {
               fecha: fecha,
               precio: (datos['servicePrice'] as num?) ?? 0,
               estado: datos['status'] ?? 'pending',
+              caducada: datos['canceladaPor'] == canceladaPorSistema,
             ),
           );
     }

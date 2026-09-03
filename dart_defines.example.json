@@ -1,4 +1,5 @@
 {
   "CLOUDINARY_CLOUD_NAME": "cloud name del panel de Cloudinary",
-  "CLOUDINARY_UPLOAD_PRESET": "nombre del upload preset en modo Unsigned"
+  "CLOUDINARY_UPLOAD_PRESET": "nombre del upload preset en modo Unsigned",
+  "GEMINI_API_KEY": "clave de la API de Gemini (Google AI Studio)"
 }

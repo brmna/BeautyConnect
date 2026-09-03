@@ -34,6 +34,7 @@ class ServicioNotificaciones {
 
   bool _iniciado = false;
   int _siguienteAviso = _idAvisoInicial;
+  String? _ultimaTanda;
 
   AndroidFlutterLocalNotificationsPlugin? get _android => _plugin
       .resolvePlatformSpecificImplementation<
@@ -106,6 +107,9 @@ class ServicioNotificaciones {
     if (!_iniciado) await iniciar();
     if (!await hayPermiso()) return;
 
+    final tanda = _firma(citas);
+    if (tanda == _ultimaTanda) return;
+
     final exactas = await puedeProgramarExactas();
 
     for (final pendiente in await _plugin.pendingNotificationRequests()) {
@@ -130,6 +134,22 @@ class ServicioNotificaciones {
         );
       }
     }
+
+    _ultimaTanda = tanda;
+  }
+
+  static String _firma(List<RecordatorioCita> citas) {
+    final lineas =
+        citas
+            .map(
+              (c) =>
+                  '${c.citaId}|${c.fechaCita.toIso8601String()}'
+                  '|${c.titulo}|${c.cuerpo}',
+            )
+            .toList()
+          ..sort();
+
+    return lineas.join(';');
   }
 
   Future<void> avisarAhora({

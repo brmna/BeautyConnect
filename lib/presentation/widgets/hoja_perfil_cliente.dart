@@ -374,8 +374,8 @@ class _FilaVisita extends StatelessWidget {
         color = TemaApp.info;
         etiqueta = 'Confirmada';
       case 'cancelled':
-        color = TemaApp.error;
-        etiqueta = 'Cancelada';
+        color = visita.caducada ? TemaApp.grisTexto : TemaApp.error;
+        etiqueta = visita.caducada ? 'Vencida' : 'Cancelada';
       default:
         color = TemaApp.aviso;
         etiqueta = 'Pendiente';

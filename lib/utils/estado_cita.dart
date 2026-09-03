@@ -21,6 +21,23 @@ DateTime? finCita(Map<String, dynamic>? cita) {
   return inicio.add(Duration(minutes: minutos > 0 ? minutos : 60));
 }
 
+const String canceladaPorSistema = 'sistema';
+
+const Duration graciaSolicitud = Duration(hours: 24);
+
+bool solicitudAbandonada(
+  Map<String, dynamic>? cita, {
+  Duration gracia = graciaSolicitud,
+  DateTime? ahora,
+}) {
+  if ((cita?['status'] ?? 'pending') != 'pending') return false;
+
+  final fin = finCita(cita);
+  if (fin == null) return false;
+
+  return (ahora ?? DateTime.now()).isAfter(fin.add(gracia));
+}
+
 bool sePuedeCalificar(Map<String, dynamic>? cita, {DateTime? ahora}) {
   final estado = cita?['status'];
   if (estado == 'cancelled') return false;

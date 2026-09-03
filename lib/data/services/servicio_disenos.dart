@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 import '../models/diseno.dart';
+import 'cache_perfiles.dart';
 
 class ServicioDisenos {
   final FirebaseFirestore? _instanciaInyectada;
@@ -9,6 +10,8 @@ class ServicioDisenos {
 
   FirebaseFirestore get _db =>
       _instanciaInyectada ?? FirebaseFirestore.instance;
+
+  late final CachePerfiles _perfiles = CachePerfiles(db: _instanciaInyectada);
 
   Stream<List<Diseno>> observarGaleria({String? etiqueta, int limite = 60}) {
     Query<Map<String, dynamic>> consulta = _db.collectionGroup('portfolio');
@@ -21,9 +24,31 @@ class ServicioDisenos {
         .orderBy('createdAt', descending: true)
         .limit(limite)
         .snapshots()
-        .map(
-          (instantanea) => instantanea.docs.map(Diseno.desdeDocumento).toList(),
+        .asyncMap(
+          (instantanea) => _sinDesactivadas(
+            instantanea.docs.map(Diseno.desdeDocumento).toList(),
+          ),
         );
+  }
+
+  Future<List<Diseno>> _sinDesactivadas(List<Diseno> disenos) async {
+    _perfiles.limpiar();
+
+    final activas = <String, bool>{};
+
+    for (final diseno in disenos) {
+      if (diseno.profesionalId.isEmpty) continue;
+      if (activas.containsKey(diseno.profesionalId)) continue;
+
+      try {
+        final datos = await _perfiles.datos(diseno.profesionalId);
+        activas[diseno.profesionalId] = datos['activo'] != false;
+      } catch (_) {
+        activas[diseno.profesionalId] = true;
+      }
+    }
+
+    return disenos.where((d) => activas[d.profesionalId] ?? true).toList();
   }
 
   CollectionReference<Map<String, dynamic>> _favoritos(String clienteId) =>

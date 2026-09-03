@@ -37,7 +37,6 @@ class _AuthWrapperState extends State<AuthWrapper> {
 
     await referencia.set({
       'email': FirebaseAuth.instance.currentUser?.email,
-      'role': 'client',
       'createdAt': FieldValue.serverTimestamp(),
     }, SetOptions(merge: true));
   }

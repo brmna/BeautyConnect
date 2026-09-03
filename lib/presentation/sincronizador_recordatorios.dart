@@ -66,10 +66,6 @@ class _SincronizadorRecordatoriosState
         }, onError: (_) {});
   }
 
-  // Las dos partes escuchan sus propias citas, asi que a la larga alguna de
-  // las dos abre la app y cierra la solicitud abandonada. Escribir lo mismo
-  // dos veces no hace daño: el estado deja de ser 'pending' y no vuelve a
-  // entrar aqui.
   void _caducarAbandonadas(List<QueryDocumentSnapshot> documentos) {
     for (final documento in documentos) {
       final datos = documento.data() as Map<String, dynamic>;
@@ -145,8 +141,6 @@ class _SincronizadorRecordatoriosState
     required bool esNueva,
     required String? canceladaPor,
   }) {
-    // Cancelar es lo unico que hacen las dos partes, asi que es lo unico que
-    // hay que atribuir: si el movimiento fue tuyo, no te lo avisas a ti mismo.
     if (nuevo == 'cancelled') {
       if (canceladaPor == canceladaPorSistema) {
         return widget.esProfesional
@@ -165,7 +159,6 @@ class _SincronizadorRecordatoriosState
     if (widget.esProfesional) {
       if (!esNueva) return null;
       if (nuevo == 'pending') return 'Nueva solicitud de cita';
-      // Con auto-aceptar la cita nace confirmada, sin pasar por 'pending'.
       if (nuevo == 'confirmed') return 'Tienes una cita nueva';
       return null;
     }

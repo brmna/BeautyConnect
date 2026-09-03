@@ -110,4 +110,74 @@ void main() {
       expect(resultado, EstadoCita.enCurso);
     });
   });
+
+  group('solicitudAbandonada', () {
+    test('una solicitud recien vencida todavia no se cierra sola', () {
+      final vencida = cita(
+        estado: 'pending',
+        fecha: ahora.subtract(const Duration(hours: 3)),
+      );
+      expect(solicitudAbandonada(vencida, ahora: ahora), isFalse);
+    });
+
+    test('pasada la gracia, la solicitud queda abandonada', () {
+      final vieja = cita(
+        estado: 'pending',
+        fecha: ahora.subtract(const Duration(days: 2)),
+      );
+      expect(solicitudAbandonada(vieja, ahora: ahora), isTrue);
+    });
+
+    test(
+      'la gracia cuenta desde que termina la cita, no desde que empieza',
+      () {
+        final justoEnElBorde = cita(
+          estado: 'pending',
+          fecha: ahora.subtract(const Duration(hours: 25)),
+          duracion: 120,
+        );
+        expect(solicitudAbandonada(justoEnElBorde, ahora: ahora), isFalse);
+      },
+    );
+
+    test('una solicitud para mas tarde no se toca', () {
+      final proxima = cita(
+        estado: 'pending',
+        fecha: ahora.add(const Duration(days: 3)),
+      );
+      expect(solicitudAbandonada(proxima, ahora: ahora), isFalse);
+    });
+
+    test('una confirmada vieja no se cierra sola', () {
+      final confirmada = cita(
+        estado: 'confirmed',
+        fecha: ahora.subtract(const Duration(days: 30)),
+      );
+      expect(solicitudAbandonada(confirmada, ahora: ahora), isFalse);
+    });
+
+    test('una ya cancelada no se vuelve a cerrar', () {
+      final cancelada = cita(
+        estado: 'cancelled',
+        fecha: ahora.subtract(const Duration(days: 30)),
+      );
+      expect(solicitudAbandonada(cancelada, ahora: ahora), isFalse);
+    });
+
+    test('sin fecha no hay nada que caducar', () {
+      final incompleta = cita(estado: 'pending', fecha: null);
+      expect(solicitudAbandonada(incompleta, ahora: ahora), isFalse);
+    });
+
+    test('la gracia se puede ajustar', () {
+      final vencida = cita(
+        estado: 'pending',
+        fecha: ahora.subtract(const Duration(hours: 3)),
+      );
+      expect(
+        solicitudAbandonada(vencida, gracia: Duration.zero, ahora: ahora),
+        isTrue,
+      );
+    });
+  });
 }

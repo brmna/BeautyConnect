@@ -1,6 +1,9 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
 
+import '../../utils/distancia.dart';
+import '../../utils/estado_cita.dart';
+import '../../utils/franjas_cita.dart';
 import '../models/ajustes_profesional.dart';
 import '../models/cambio_solicitado.dart';
 import '../models/modalidad_cita.dart';
@@ -240,6 +243,23 @@ class ServicioDisponibilidad {
     return List.generate(necesarias, (i) => _aTexto(inicio + i * intervalo));
   }
 
+  bool _fueraDelRadio({
+    required Ubicacion profesional,
+    required Ubicacion? cliente,
+    required double radioKm,
+  }) {
+    if (!profesional.tienePunto) return false;
+    if (cliente == null || !cliente.tienePunto) return false;
+
+    return distanciaKm(
+          latitudA: profesional.latitud!,
+          longitudA: profesional.longitud!,
+          latitudB: cliente.latitud!,
+          longitudB: cliente.longitud!,
+        ) >
+        radioKm;
+  }
+
   bool _sonSeguidas(List<FranjaHoraria> bloque, int intervalo) {
     for (var i = 1; i < bloque.length; i++) {
       final anterior = _aMinutos(bloque[i - 1].hora);
@@ -333,6 +353,26 @@ class ServicioDisponibilidad {
         throw FueraDePlazo(ajustes.anticipacionMinutos);
       }
 
+      final aDomicilio = modalidad.esDomicilio;
+      final ubicacionProfesional = Ubicacion.desdeMapa(perfil.data());
+
+      if (aDomicilio && !ajustes.llegaADomicilio) {
+        throw const SinDomicilios();
+      }
+
+      if (!aDomicilio && ajustes.soloDomicilio) {
+        throw const SoloDomicilios();
+      }
+
+      if (aDomicilio &&
+          _fueraDelRadio(
+            profesional: ubicacionProfesional,
+            cliente: ubicacionCliente,
+            radioKm: ajustes.radioCoberturaKm,
+          )) {
+        throw FueraDeCobertura(ajustes.radioCoberturaKm);
+      }
+
       for (final franja in horas) {
         if (dia.reservadas.containsKey(franja)) {
           throw const FranjaNoDisponible();
@@ -351,19 +391,7 @@ class ServicioDisponibilidad {
       }, SetOptions(merge: true));
 
       final confirmada = ajustes.autoAceptar;
-      final direccion = confirmada
-          ? Ubicacion.desdeMapa(perfil.data()).resumen
-          : '';
-
-      final aDomicilio = modalidad.esDomicilio;
-
-      if (aDomicilio && !ajustes.llegaADomicilio) {
-        throw const SinDomicilios();
-      }
-
-      if (!aDomicilio && ajustes.soloDomicilio) {
-        throw const SoloDomicilios();
-      }
+      final direccion = confirmada ? ubicacionProfesional.resumen : '';
 
       final zonaCliente = aDomicilio ? ubicacionCliente : null;
 
@@ -420,8 +448,12 @@ class ServicioDisponibilidad {
     required int duracionMinutos,
     required int intervalo,
   }) async {
+    final mismoDia = idFecha(fechaAnterior) == idFecha(fechaNueva);
+
     final refNueva = _refDia(profesionalId, fechaNueva);
+    final refAnterior = _refDia(profesionalId, fechaAnterior);
     final refCita = _db.collection('bookings').doc(citaId);
+    final refPerfil = _db.collection('users').doc(profesionalId);
 
     final horas = horasOcupadas(
       horaInicio: horaNueva,
@@ -434,13 +466,12 @@ class ServicioDisponibilidad {
       citaId: citaId,
     );
 
-    final refPerfil = _db.collection('users').doc(profesionalId);
-
     await _db.runTransaction((transaccion) async {
       final documento = await transaccion.get(refNueva);
-      final dia = DisponibilidadDia.desdeMapa(documento.data());
-
       final perfil = await transaccion.get(refPerfil);
+      final anterior = mismoDia ? null : await transaccion.get(refAnterior);
+
+      final dia = DisponibilidadDia.desdeMapa(documento.data());
       final ajustes = AjustesProfesional.desdeMapa(perfil.data());
 
       final limite = DateTime.now().add(
@@ -471,10 +502,32 @@ class ServicioDisponibilidad {
           .map((t) => t.aMapa())
           .toList();
 
+      final sobran = mismoDia
+          ? horasAnteriores.where((h) => !horas.contains(h))
+          : const <String>[];
+
       transaccion.set(refNueva, {
-        'reservadas': {for (final franja in horas) franja: citaId},
+        'reservadas': {
+          for (final franja in horas) franja: citaId,
+          for (final hora in sobran) hora: FieldValue.delete(),
+        },
         'ocupadas': [...otrosTramos, tramo.aMapa()],
       }, SetOptions(merge: true));
+
+      if (anterior != null && anterior.exists) {
+        final diaAnterior = DisponibilidadDia.desdeMapa(anterior.data());
+
+        transaccion.set(refAnterior, {
+          if (horasAnteriores.isNotEmpty)
+            'reservadas': {
+              for (final hora in horasAnteriores) hora: FieldValue.delete(),
+            },
+          'ocupadas': diaAnterior.ocupadas
+              .where((t) => t.citaId != citaId)
+              .map((t) => t.aMapa())
+              .toList(),
+        }, SetOptions(merge: true));
+      }
 
       transaccion.update(refCita, {
         'date': Timestamp.fromDate(combinar(fechaNueva, horaNueva)),
@@ -485,22 +538,6 @@ class ServicioDisponibilidad {
         CambioSolicitado.clave: FieldValue.delete(),
       });
     });
-
-    final sobran = horasAnteriores.where((h) => !horas.contains(h)).toList();
-    final mismoDia = idFecha(fechaAnterior) == idFecha(fechaNueva);
-
-    if (!mismoDia) {
-      await liberarReserva(
-        profesionalId: profesionalId,
-        fecha: fechaAnterior,
-        horas: horasAnteriores,
-        citaId: citaId,
-      );
-    } else if (sobran.isNotEmpty) {
-      await _refDia(profesionalId, fechaAnterior).set({
-        'reservadas': {for (final hora in sobran) hora: FieldValue.delete()},
-      }, SetOptions(merge: true));
-    }
   }
 
   Future<void> solicitarCambio({
@@ -522,6 +559,51 @@ class ServicioDisponibilidad {
     return _db.collection('bookings').doc(citaId).update({
       CambioSolicitado.clave: FieldValue.delete(),
     });
+  }
+
+  Future<int> cancelarActivas({
+    required String uid,
+    required bool esProfesional,
+    required String motivo,
+  }) async {
+    final campo = esProfesional ? 'professionalId' : 'clientId';
+
+    final consulta = await _db
+        .collection('bookings')
+        .where(campo, isEqualTo: uid)
+        .get();
+
+    var cerradas = 0;
+
+    for (final documento in consulta.docs) {
+      final datos = documento.data();
+
+      if (clasificarCita(datos) == EstadoCita.pasada) continue;
+
+      await documento.reference.update({
+        'status': 'cancelled',
+        'canceladaPor': esProfesional ? 'profesional' : 'cliente',
+        'motivoCancelacion': motivo,
+        'respondidoEn': FieldValue.serverTimestamp(),
+        'avisoVisto': false,
+        CambioSolicitado.clave: FieldValue.delete(),
+      });
+
+      cerradas++;
+
+      final fecha = inicioCita(datos);
+      final profesionalId = datos['professionalId'] as String?;
+      if (fecha == null || profesionalId == null) continue;
+
+      await liberarReserva(
+        profesionalId: profesionalId,
+        fecha: fecha,
+        horas: franjasDeLaCita(datos),
+        citaId: documento.id,
+      );
+    }
+
+    return cerradas;
   }
 
   Future<void> liberarReserva({
