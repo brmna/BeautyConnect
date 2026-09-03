@@ -104,10 +104,10 @@ class TemaApp {
         ),
       ),
       navigationBarTheme: NavigationBarThemeData(
-        backgroundColor: negro,
-        indicatorColor: blanco.withValues(alpha: 0.18),
+        backgroundColor: blanco,
+        indicatorColor: rosaSuave,
         surfaceTintColor: Colors.transparent,
-        shadowColor: Colors.black54,
+        shadowColor: Colors.black26,
         elevation: 8,
         height: 70,
         labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
@@ -115,8 +115,8 @@ class TemaApp {
           (estados) => IconThemeData(
             size: 22,
             color: estados.contains(WidgetState.selected)
-                ? blanco
-                : const Color(0xFF9A9A9A),
+                ? negro
+                : grisTexto,
           ),
         ),
         labelTextStyle: WidgetStateProperty.resolveWith(
@@ -126,8 +126,8 @@ class TemaApp {
                 ? FontWeight.w600
                 : FontWeight.w400,
             color: estados.contains(WidgetState.selected)
-                ? blanco
-                : const Color(0xFF9A9A9A),
+                ? negro
+                : grisTexto,
           ),
         ),
       ),
