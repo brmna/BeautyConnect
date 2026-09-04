@@ -55,9 +55,13 @@ class _BienvenidaProfesionalScreenState
     super.dispose();
   }
 
+  int _enMinutos(TimeOfDay hora) => hora.hour * 60 + hora.minute;
+
+  bool get _horarioValido => _enMinutos(_cierre) > _enMinutos(_apertura);
+
   bool get _puedeAvanzar {
     if (_paso == 0) return _soloDomicilio || _ubicacion.estaDefinida;
-    if (_paso == 2) return _diasActivos.isNotEmpty;
+    if (_paso == 2) return _diasActivos.isNotEmpty && _horarioValido;
     return true;
   }
 
@@ -430,6 +434,33 @@ class _BienvenidaProfesionalScreenState
             Expanded(child: _selectorHora('Cierro', _cierre, false)),
           ],
         ),
+        if (!_horarioValido) ...[
+          const SizedBox(height: 12),
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: TemaApp.errorSuave,
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: const Row(
+              children: [
+                Icon(Icons.error_outline, size: 16, color: TemaApp.error),
+                SizedBox(width: 9),
+                Expanded(
+                  child: Text(
+                    'La hora de cierre debe ser después de la de apertura. '
+                    'Si no, no tendrías ninguna hora para que te reserven.',
+                    style: TextStyle(
+                      fontSize: 12,
+                      height: 1.35,
+                      color: TemaApp.error,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
         const SizedBox(height: 20),
         Row(
           children: [

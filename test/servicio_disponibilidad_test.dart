@@ -258,6 +258,32 @@ void main() {
       expect(libres, isEmpty);
     });
   });
+
+  group('un horario al reves deja el dia sin franjas', () {
+    List<FranjaHoraria> franjasDe(String inicio, String fin) {
+      return servicio.generarFranjas(
+        horario: horarioDe(inicio: inicio, fin: fin, intervalo: 60),
+        dia: DisponibilidadDia.vacia(),
+        fecha: miercoles,
+      );
+    }
+
+    test('un rango normal si genera franjas', () {
+      expect(franjasDe('09:00', '18:00'), hasLength(9));
+    });
+
+    test('cerrar a las 12 de la noche no genera ninguna', () {
+      expect(franjasDe('09:00', '00:00'), isEmpty);
+    });
+
+    test('cerrar antes de abrir no genera ninguna', () {
+      expect(franjasDe('18:00', '09:00'), isEmpty);
+    });
+
+    test('abrir y cerrar a la misma hora no genera ninguna', () {
+      expect(franjasDe('09:00', '09:00'), isEmpty);
+    });
+  });
 }
 
 void pruebasDeTramosOcupados() {
