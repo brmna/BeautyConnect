@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../../utils/margenes.dart';
 import '../../data/services/servicio_clientes.dart';
 import '../screens/chat_screen.dart';
 import 'hoja_modal.dart';
@@ -69,7 +70,12 @@ class HojaPerfilCliente extends StatelessWidget {
                 keyboardDismissBehavior:
                     ScrollViewKeyboardDismissBehavior.onDrag,
                 controller: controlador,
-                padding: const EdgeInsets.fromLTRB(24, 24, 24, 32),
+                padding: EdgeInsets.fromLTRB(
+                  24,
+                  24,
+                  24,
+                  margenHoja(context, base: 32),
+                ),
                 children: [
                   _encabezado(datos),
                   const SizedBox(height: 18),

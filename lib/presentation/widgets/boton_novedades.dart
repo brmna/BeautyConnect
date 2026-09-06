@@ -2,11 +2,12 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 
 import '../../theme/app_theme.dart';
+import '../../utils/margenes.dart';
 import '../../utils/novedades.dart';
 import 'estado_vacio.dart';
 import 'hoja_modal.dart';
 
-class BotonNovedades extends StatelessWidget {
+class BotonNovedades extends StatefulWidget {
   final String uid;
   final bool esProfesional;
   final VoidCallback? onVerCitas;
@@ -18,54 +19,72 @@ class BotonNovedades extends StatelessWidget {
     this.onVerCitas,
   });
 
-  static DocumentReference<Map<String, dynamic>> _perfil(String uid) =>
-      FirebaseFirestore.instance.collection('users').doc(uid);
+  @override
+  State<BotonNovedades> createState() => _BotonNovedadesState();
+}
+
+class _BotonNovedadesState extends State<BotonNovedades> {
+  DateTime? _vistoAqui;
+
+  DocumentReference<Map<String, dynamic>> get _perfil =>
+      FirebaseFirestore.instance.collection('users').doc(widget.uid);
 
   Stream<QuerySnapshot<Map<String, dynamic>>> get _citas => FirebaseFirestore
       .instance
       .collection('bookings')
-      .where(esProfesional ? 'professionalId' : 'clientId', isEqualTo: uid)
+      .where(
+        widget.esProfesional ? 'professionalId' : 'clientId',
+        isEqualTo: widget.uid,
+      )
       .snapshots();
 
-  Future<void> _abrir(BuildContext context, List<Novedad> novedades) async {
-    await _perfil(uid).set({
+  DateTime? _ultimaVista(DateTime? delServidor) {
+    final local = _vistoAqui;
+    if (local == null) return delServidor;
+    if (delServidor == null) return local;
+
+    return delServidor.isAfter(local) ? delServidor : local;
+  }
+
+  Future<void> _abrir(List<Novedad> novedades) async {
+    setState(() => _vistoAqui = DateTime.now());
+
+    _perfil.set({
       'novedadesVistasEn': FieldValue.serverTimestamp(),
     }, SetOptions(merge: true));
-
-    if (!context.mounted) return;
 
     final verCitas = await abrirHoja<bool>(
       context,
       hijo: _HojaNovedades(novedades: novedades),
     );
 
-    if (verCitas == true) onVerCitas?.call();
+    if (verCitas == true) widget.onVerCitas?.call();
   }
 
   @override
   Widget build(BuildContext context) {
-    if (uid.isEmpty) return const SizedBox.shrink();
+    if (widget.uid.isEmpty) return const SizedBox.shrink();
 
     return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
       stream: _citas,
       builder: (context, citas) {
         final novedades = novedadesDeCitas(
           citas.data?.docs ?? const [],
-          esProfesional: esProfesional,
+          esProfesional: widget.esProfesional,
         );
 
         return StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
-          stream: _perfil(uid).snapshots(),
+          stream: _perfil.snapshots(),
           builder: (context, perfil) {
-            final vistasEn =
+            final delServidor =
                 (perfil.data?.data()?['novedadesVistasEn'] as Timestamp?)
                     ?.toDate();
 
-            final sinVer = contarSinVer(novedades, vistasEn);
+            final sinVer = contarSinVer(novedades, _ultimaVista(delServidor));
 
             return IconButton(
               tooltip: 'Novedades',
-              onPressed: () => _abrir(context, novedades),
+              onPressed: () => _abrir(novedades),
               icon: Badge.count(
                 count: sinVer,
                 isLabelVisible: sinVer > 0,
@@ -92,7 +111,7 @@ class _HojaNovedades extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 4, 20, 16),
+      padding: EdgeInsets.fromLTRB(20, 4, 20, margenHoja(context, base: 16)),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,

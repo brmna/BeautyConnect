@@ -233,7 +233,8 @@ class _SearchScreenState extends State<SearchScreen>
 
     return todas.where((p) {
       final enNombre = p.name.toLowerCase().contains(consulta);
-      final enZona = p.zona.toLowerCase().contains(consulta);
+      final enZona =
+          !p.soloDomicilio && p.zona.toLowerCase().contains(consulta);
       final enEspecialidad = p.specialties.any(
         (e) => e.toLowerCase().contains(consulta),
       );
@@ -563,7 +564,26 @@ class _TarjetaProfesional extends StatelessWidget {
                         ],
                       ],
                     ),
-                    if (profesional.zona.isNotEmpty) ...[
+                    if (profesional.soloDomicilio) ...[
+                      const SizedBox(height: 4),
+                      const Row(
+                        children: [
+                          Icon(
+                            Icons.directions_car_outlined,
+                            size: 13,
+                            color: TemaApp.grisTexto,
+                          ),
+                          SizedBox(width: 3),
+                          Text(
+                            'Solo a domicilio',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: TemaApp.grisSubtitulo,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ] else if (profesional.zona.isNotEmpty) ...[
                       const SizedBox(height: 4),
                       Row(
                         children: [

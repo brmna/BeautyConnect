@@ -288,7 +288,10 @@ class _TarjetaFavorita extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final nombre = (datos['name'] as String?)?.trim() ?? '';
-    final zona = Ubicacion.desdeMapa(datos).resumen;
+    final ajustes = AjustesProfesional.desdeMapa(datos);
+    final zona = ajustes.soloDomicilio
+        ? ''
+        : Ubicacion.desdeMapa(datos).resumen;
     final resenas = (datos['reviewsCount'] as num?)?.toInt() ?? 0;
     final especialidades = List<String>.from(datos['specialties'] ?? []);
     final aceptaCitas = AjustesProfesional.desdeMapa(datos).aceptandoClientas;
@@ -365,7 +368,11 @@ class _TarjetaFavorita extends StatelessWidget {
                         const SizedBox(width: 3),
                         Expanded(
                           child: Text(
-                            zona.isEmpty ? 'Sin ubicación registrada' : zona,
+                            zona.isNotEmpty
+                                ? zona
+                                : (ajustes.soloDomicilio
+                                      ? 'Solo a domicilio'
+                                      : 'Sin ubicación registrada'),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                             style: TextStyle(
