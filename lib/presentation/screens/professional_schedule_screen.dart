@@ -108,7 +108,7 @@ class _PantallaAgendaProfesionalState extends State<PantallaAgendaProfesional> {
                     fecha: _fechaSeleccionada,
                     intervalo: horario.intervaloMinutos,
                     onAlternar: _alternarFranja,
-                    onAgregar: _agregarFranja,
+                    onAgregar: () => _agregarFranja(franjas),
                   );
                 },
               ),
@@ -196,7 +196,7 @@ class _PantallaAgendaProfesionalState extends State<PantallaAgendaProfesional> {
     }
   }
 
-  Future<void> _agregarFranja() async {
+  Future<void> _agregarFranja(List<FranjaHoraria> existentes) async {
     final hora = await elegirHora(
       context,
       inicial: const TimeOfDay(hour: 9, minute: 0),
@@ -206,6 +206,16 @@ class _PantallaAgendaProfesionalState extends State<PantallaAgendaProfesional> {
 
     final texto = horaGuardable(hora);
     final mensajero = ScaffoldMessenger.of(context);
+
+    if (existentes.any((franja) => franja.hora == texto)) {
+      mensajero.showSnackBar(
+        construirMensaje(
+          'Ya tienes una franja a las ${formatearHora(texto)}',
+          tipo: TipoAviso.aviso,
+        ),
+      );
+      return;
+    }
 
     try {
       await _servicio.agregarFranjaExtra(_uid, _fechaSeleccionada, texto);

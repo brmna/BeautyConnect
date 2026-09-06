@@ -11,8 +11,10 @@ import '../../data/services/servicio_subida_imagenes.dart';
 import '../../theme/app_theme.dart';
 import '../../utils/distancia.dart';
 import '../../utils/formato.dart';
+import '../../utils/margenes.dart';
 import '../widgets/barra_ocultable.dart';
 import '../widgets/cabecera_pantalla.dart';
+import '../widgets/hoja_modal.dart';
 import '../widgets/mensaje.dart';
 import '../widgets/recarga_manual.dart';
 import '../widgets/mapa_zonas.dart';
@@ -21,9 +23,25 @@ import 'professional_detail_screen.dart';
 
 enum OrdenBusqueda { relevancia, calificacion, resenas, distancia }
 
+enum FiltroModalidad { todas, domicilio, local }
+
+extension _EtiquetaModalidad on FiltroModalidad {
+  String get etiqueta => switch (this) {
+    FiltroModalidad.todas => 'Todas',
+    FiltroModalidad.domicilio => 'Domicilio',
+    FiltroModalidad.local => 'En su local',
+  };
+
+  IconData get icono => switch (this) {
+    FiltroModalidad.todas => Icons.people_outline,
+    FiltroModalidad.domicilio => Icons.directions_car_outlined,
+    FiltroModalidad.local => Icons.storefront_outlined,
+  };
+}
+
 extension _EtiquetaOrden on OrdenBusqueda {
   String get etiqueta => switch (this) {
-    OrdenBusqueda.relevancia => 'Todas',
+    OrdenBusqueda.relevancia => 'Sugeridas',
     OrdenBusqueda.calificacion => 'Mejor calificación',
     OrdenBusqueda.resenas => 'Más reseñas',
     OrdenBusqueda.distancia => 'Cerca de mí',
@@ -69,6 +87,7 @@ class _SearchScreenState extends State<SearchScreen>
 
   String _busqueda = '';
   OrdenBusqueda _orden = OrdenBusqueda.relevancia;
+  FiltroModalidad _modalidad = FiltroModalidad.todas;
   Position? _miUbicacion;
   bool _buscandoUbicacion = false;
 
@@ -227,11 +246,19 @@ class _SearchScreenState extends State<SearchScreen>
     }
   }
 
-  List<Professional> _filtrar(List<Professional> todas) {
-    final consulta = _busqueda.trim().toLowerCase();
-    if (consulta.isEmpty) return todas;
+  bool _cumpleModalidad(Professional p) => switch (_modalidad) {
+    FiltroModalidad.todas => true,
+    FiltroModalidad.domicilio => p.vaADomicilio,
+    FiltroModalidad.local => p.atiendeEnSuLocal,
+  };
 
-    return todas.where((p) {
+  List<Professional> _filtrar(List<Professional> todas) {
+    final porModalidad = todas.where(_cumpleModalidad).toList();
+
+    final consulta = _busqueda.trim().toLowerCase();
+    if (consulta.isEmpty) return porModalidad;
+
+    return porModalidad.where((p) {
       final enNombre = p.name.toLowerCase().contains(consulta);
       final enZona =
           !p.soloDomicilio && p.zona.toLowerCase().contains(consulta);
@@ -350,55 +377,122 @@ class _SearchScreenState extends State<SearchScreen>
             setState(() => _enMapa = indice == 1);
           },
         ),
-        if (!_enMapa) _ordenamientos(),
+        if (!_enMapa)
+          Padding(
+            padding: const EdgeInsets.fromLTRB(14, 8, 14, 2),
+            child: Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                ...FiltroModalidad.values.map(_chipModalidad),
+                _chipOrden(),
+              ],
+            ),
+          ),
       ],
     );
   }
 
-  Widget _ordenamientos() {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(14, 8, 14, 2),
-      child: Wrap(
-        spacing: 8,
-        runSpacing: 8,
-        children: [
-          ...OrdenBusqueda.values.map((orden) {
-            final activo = orden == _orden;
-            final cargando =
-                _buscandoUbicacion && orden == OrdenBusqueda.distancia;
+  Widget _chipModalidad(FiltroModalidad filtro) {
+    final activo = filtro == _modalidad;
 
-            return ChoiceChip(
-              selected: activo,
-              showCheckmark: false,
-              onSelected: (_) => _cambiarOrden(orden),
-              avatar: cargando
-                  ? const SizedBox(
-                      width: 13,
-                      height: 13,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    )
-                  : Icon(
-                      orden.icono,
-                      size: 15,
-                      color: activo ? TemaApp.blanco : TemaApp.grisSubtitulo,
-                    ),
-              label: Text(orden.etiqueta),
-              labelStyle: TextStyle(
-                fontSize: 12,
-                color: activo ? TemaApp.blanco : TemaApp.textoOscuro,
-                fontWeight: activo ? FontWeight.w600 : FontWeight.normal,
+    return ChoiceChip(
+      selected: activo,
+      showCheckmark: false,
+      onSelected: (_) {
+        mostrarCabecera();
+        setState(() => _modalidad = filtro);
+      },
+      avatar: Icon(
+        filtro.icono,
+        size: 15,
+        color: activo ? TemaApp.blanco : TemaApp.grisSubtitulo,
+      ),
+      label: Text(filtro.etiqueta),
+      labelStyle: TextStyle(
+        fontSize: 12,
+        color: activo ? TemaApp.blanco : TemaApp.textoOscuro,
+        fontWeight: activo ? FontWeight.w600 : FontWeight.normal,
+      ),
+      selectedColor: TemaApp.negro,
+      backgroundColor: TemaApp.blanco,
+      side: BorderSide.none,
+      visualDensity: VisualDensity.compact,
+      materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+    );
+  }
+
+  Widget _chipOrden() {
+    final ordenando = _orden != OrdenBusqueda.relevancia;
+
+    return ActionChip(
+      onPressed: _elegirOrden,
+      avatar: _buscandoUbicacion
+          ? const SizedBox(
+              width: 14,
+              height: 14,
+              child: CircularProgressIndicator(strokeWidth: 2),
+            )
+          : Icon(
+              Icons.swap_vert,
+              size: 15,
+              color: ordenando ? TemaApp.blanco : TemaApp.grisSubtitulo,
+            ),
+      label: Text(ordenando ? _orden.etiqueta : 'Ordenar'),
+      labelStyle: TextStyle(
+        fontSize: 12,
+        color: ordenando ? TemaApp.blanco : TemaApp.textoOscuro,
+        fontWeight: ordenando ? FontWeight.w600 : FontWeight.normal,
+      ),
+      backgroundColor: ordenando ? TemaApp.negro : TemaApp.blanco,
+      side: BorderSide.none,
+      visualDensity: VisualDensity.compact,
+      materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+    );
+  }
+
+  Future<void> _elegirOrden() async {
+    final elegido = await abrirHoja<OrdenBusqueda>(
+      context,
+      hijo: Padding(
+        padding: EdgeInsets.only(
+          left: 8,
+          right: 8,
+          top: 4,
+          bottom: margenHoja(context, base: 12),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Padding(
+              padding: EdgeInsets.fromLTRB(12, 0, 12, 8),
+              child: Text(
+                'Ordenar por',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
               ),
-              selectedColor: TemaApp.negro,
-              backgroundColor: TemaApp.blanco,
-              side: BorderSide.none,
-              visualDensity: VisualDensity.compact,
-              materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-            );
-          }),
-        ],
+            ),
+            ...OrdenBusqueda.values.map(
+              (orden) => ListTile(
+                onTap: () => Navigator.pop(context, orden),
+                leading: Icon(orden.icono, size: 20),
+                title: Text(
+                  orden.etiqueta,
+                  style: const TextStyle(fontSize: 14),
+                ),
+                trailing: orden == _orden
+                    ? const Icon(Icons.check, size: 20, color: TemaApp.negro)
+                    : null,
+              ),
+            ),
+          ],
+        ),
       ),
     );
+
+    if (elegido != null) await _cambiarOrden(elegido);
   }
 
   Widget _cabecera() {

@@ -22,6 +22,7 @@ import '../widgets/hoja_reagendar.dart';
 import 'bandeja_chats_screen.dart';
 import 'chat_screen.dart';
 import '../widgets/datos_cita.dart';
+import '../widgets/mensaje.dart';
 import '../widgets/recarga_manual.dart';
 import 'professional_detail_screen.dart';
 
@@ -633,14 +634,28 @@ class _TarjetaCita extends StatelessWidget {
       if (!seguro) return;
     }
 
-    await cita.reference.update({
-      'status': 'cancelled',
-      'canceladaPor': 'cliente',
-      'motivoCancelacion': ?motivo,
-      'respondidoEn': FieldValue.serverTimestamp(),
-      'avisoVisto': false,
-      CambioSolicitado.clave: FieldValue.delete(),
-    });
+    if (!context.mounted) return;
+    final mensajero = ScaffoldMessenger.of(context);
+
+    try {
+      await cita.reference.update({
+        'status': 'cancelled',
+        'canceladaPor': 'cliente',
+        'motivoCancelacion': ?motivo,
+        'respondidoEn': FieldValue.serverTimestamp(),
+        'avisoVisto': false,
+        CambioSolicitado.clave: FieldValue.delete(),
+      });
+    } catch (_) {
+      mensajero.showSnackBar(
+        construirMensaje('No se pudo cancelar la cita', tipo: TipoAviso.error),
+      );
+      return;
+    }
+
+    mensajero.showSnackBar(
+      construirMensaje('Cita cancelada', tipo: TipoAviso.exito),
+    );
 
     final fecha = (datos['date'] as Timestamp?)?.toDate();
     final profesionalId = datos['professionalId'] as String?;
@@ -662,12 +677,14 @@ class _TarjetaCita extends StatelessWidget {
       }
     }
 
-    await ServicioDisponibilidad().liberarReserva(
-      profesionalId: profesionalId,
-      fecha: fecha,
-      horas: franjasDeLaCita(datos),
-      citaId: cita.id,
-    );
+    try {
+      await ServicioDisponibilidad().liberarReserva(
+        profesionalId: profesionalId,
+        fecha: fecha,
+        horas: franjasDeLaCita(datos),
+        citaId: cita.id,
+      );
+    } catch (_) {}
   }
 }
 

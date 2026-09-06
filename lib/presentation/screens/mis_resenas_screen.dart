@@ -6,6 +6,10 @@ import '../../data/models/resena.dart';
 import '../../data/services/servicio_resenas.dart';
 import '../../theme/app_theme.dart';
 import '../../utils/formato.dart';
+import '../widgets/confirmacion.dart';
+import '../widgets/hoja_calificar.dart';
+import '../widgets/hoja_modal.dart';
+import '../widgets/mensaje.dart';
 import '../widgets/hoja_responder_resena.dart';
 import '../widgets/resenas.dart';
 
@@ -73,6 +77,55 @@ class MisResenasScreen extends StatelessWidget {
               resena: resena,
             );
 
+            void editar(Resena resena) => abrirHoja(
+              context,
+              hijo: HojaCalificar(
+                profesionalId: resena.profesionalId,
+                profesionalNombre: resena.profesionalNombre,
+                profesionalFoto: resena.profesionalFoto,
+                citaId: resena.id,
+                clienteId: resena.clienteId,
+                clienteNombre: resena.clienteNombre,
+                clienteFoto: resena.clienteFoto,
+                servicio: resena.servicio,
+                existente: resena,
+              ),
+            );
+
+            Future<void> eliminar(Resena resena) async {
+              final seguro = await confirmar(
+                context,
+                titulo: 'Eliminar tu reseña',
+                mensaje:
+                    'Se borra tu comentario y tu nota deja de contar en el '
+                    'promedio de ${resena.profesionalNombre}.',
+                siga: 'Eliminar',
+                destructiva: true,
+              );
+              if (!seguro || !context.mounted) return;
+
+              final mensajero = ScaffoldMessenger.of(context);
+
+              try {
+                await servicio.eliminar(
+                  profesionalId: resena.profesionalId,
+                  citaId: resena.id,
+                );
+                mensajero.showSnackBar(
+                  construirMensaje('Reseña eliminada', tipo: TipoAviso.exito),
+                );
+              } catch (_) {
+                mensajero.showSnackBar(
+                  construirMensaje(
+                    'No se pudo eliminar la reseña',
+                    tipo: TipoAviso.error,
+                  ),
+                );
+              }
+            }
+
+            final mias = !_esProfesional;
+
             return Column(
               children: [
                 ResumenResenas(
@@ -98,6 +151,8 @@ class MisResenasScreen extends StatelessWidget {
                         resenas: resenas,
                         perspectiva: perspectiva,
                         onResponder: puedeResponder ? responder : null,
+                        onEditar: mias ? editar : null,
+                        onEliminar: mias ? eliminar : null,
                       ),
                       ListaResenas(
                         resenas: conFotos,
@@ -106,6 +161,8 @@ class MisResenasScreen extends StatelessWidget {
                             ? 'Ninguna reseña trae fotos todavía'
                             : 'No has subido fotos en tus reseñas',
                         onResponder: puedeResponder ? responder : null,
+                        onEditar: mias ? editar : null,
+                        onEliminar: mias ? eliminar : null,
                       ),
                       ListaResenas(
                         resenas: conRespuesta,
@@ -114,6 +171,8 @@ class MisResenasScreen extends StatelessWidget {
                             ? 'Aún no has respondido ninguna reseña'
                             : 'Todavía no te han respondido',
                         onResponder: puedeResponder ? responder : null,
+                        onEditar: mias ? editar : null,
+                        onEliminar: mias ? eliminar : null,
                       ),
                     ],
                   ),

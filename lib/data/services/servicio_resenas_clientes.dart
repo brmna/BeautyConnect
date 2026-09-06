@@ -7,7 +7,10 @@ class ResenaCliente {
   final String servicio;
   final int calificacion;
   final String comentario;
+  final List<String> fotos;
   final DateTime? fecha;
+
+  bool get tieneFotos => fotos.isNotEmpty;
 
   const ResenaCliente({
     required this.citaId,
@@ -16,6 +19,7 @@ class ResenaCliente {
     required this.servicio,
     required this.calificacion,
     required this.comentario,
+    this.fotos = const [],
     this.fecha,
   });
 
@@ -31,6 +35,7 @@ class ResenaCliente {
       servicio: datos['servicio'] ?? '',
       calificacion: (datos['calificacion'] as num?)?.toInt() ?? 0,
       comentario: datos['comentario'] ?? '',
+      fotos: List<String>.from(datos['fotos'] ?? const []),
       fecha: (datos['createdAt'] as Timestamp?)?.toDate(),
     );
   }
@@ -70,6 +75,7 @@ class ServicioResenasClientes {
     required String servicio,
     required int calificacion,
     required String comentario,
+    List<String> fotos = const [],
   }) async {
     final refResena = _resenas(clienteId).doc(citaId);
     final refPerfil = _db.collection('users').doc(clienteId);
@@ -94,6 +100,7 @@ class ServicioResenasClientes {
         'servicio': servicio,
         'calificacion': calificacion,
         'comentario': comentario.trim(),
+        'fotos': fotos,
         'createdAt': FieldValue.serverTimestamp(),
       });
 
@@ -104,6 +111,85 @@ class ServicioResenasClientes {
       }, SetOptions(merge: true));
     });
   }
+
+  Future<void> editar({
+    required String clienteId,
+    required String citaId,
+    required int calificacion,
+    required String comentario,
+    List<String> fotos = const [],
+  }) async {
+    final refResena = _resenas(clienteId).doc(citaId);
+    final refPerfil = _db.collection('users').doc(clienteId);
+
+    await _db.runTransaction((transaccion) async {
+      final actual = await transaccion.get(refResena);
+      if (!actual.exists) throw const ResenaClienteNoEncontrada();
+
+      final anterior = (actual.data()?['calificacion'] as num?)?.toInt() ?? 0;
+
+      final perfil = await transaccion.get(refPerfil);
+      final datos = perfil.data() ?? {};
+      final total = (datos['reviewsCountCliente'] as num?)?.toInt() ?? 1;
+      final sumaPrevia =
+          (datos['sumaCalificacionesCliente'] as num?)?.toInt() ?? 0;
+
+      final suma = sumaPrevia - anterior + calificacion;
+
+      transaccion.update(refResena, {
+        'calificacion': calificacion,
+        'comentario': comentario.trim(),
+        'fotos': fotos,
+        'editadaEn': FieldValue.serverTimestamp(),
+      });
+
+      transaccion.set(refPerfil, {
+        'sumaCalificacionesCliente': suma,
+        'ratingCliente': total <= 0
+            ? 0.0
+            : double.parse((suma / total).toStringAsFixed(1)),
+      }, SetOptions(merge: true));
+    });
+  }
+
+  Future<void> eliminar({
+    required String clienteId,
+    required String citaId,
+  }) async {
+    final refResena = _resenas(clienteId).doc(citaId);
+    final refPerfil = _db.collection('users').doc(clienteId);
+
+    await _db.runTransaction((transaccion) async {
+      final actual = await transaccion.get(refResena);
+      if (!actual.exists) return;
+
+      final calificacion =
+          (actual.data()?['calificacion'] as num?)?.toInt() ?? 0;
+
+      final perfil = await transaccion.get(refPerfil);
+      final datos = perfil.data() ?? {};
+      final totalPrevio = (datos['reviewsCountCliente'] as num?)?.toInt() ?? 0;
+      final sumaPrevia =
+          (datos['sumaCalificacionesCliente'] as num?)?.toInt() ?? 0;
+
+      final total = totalPrevio > 0 ? totalPrevio - 1 : 0;
+      final suma = sumaPrevia - calificacion;
+
+      transaccion.delete(refResena);
+
+      transaccion.set(refPerfil, {
+        'reviewsCountCliente': total,
+        'sumaCalificacionesCliente': total == 0 ? 0 : suma,
+        'ratingCliente': total == 0
+            ? 0.0
+            : double.parse((suma / total).toStringAsFixed(1)),
+      }, SetOptions(merge: true));
+    });
+  }
+}
+
+class ResenaClienteNoEncontrada implements Exception {
+  const ResenaClienteNoEncontrada();
 }
 
 class ResenaClienteDuplicada implements Exception {

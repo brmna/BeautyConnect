@@ -564,6 +564,7 @@ class _ProfessionalAgendaScreenState extends State<ProfessionalAgendaScreen>
     final fecha = (datos['date'] as Timestamp?)?.toDate();
     final cuando = fecha == null ? '' : ' del ${formatearFechaHora(fecha)}';
     final eraConfirmada = datos['status'] == 'confirmed';
+    final aDomicilio = modalidadDeCita(datos).esDomicilio;
 
     String? motivo;
 
@@ -595,9 +596,11 @@ class _ProfessionalAgendaScreenState extends State<ProfessionalAgendaScreen>
       final seguro = await confirmar(
         context,
         titulo: 'Confirmar la cita',
-        mensaje:
-            'Aceptas $servicio$cuando. El cliente verá tu dirección exacta '
-            'y podrá escribirte.',
+        mensaje: aDomicilio
+            ? 'Aceptas $servicio$cuando y vas hasta donde está el cliente. '
+                  'Verás su dirección exacta y podrás abrir la ruta.'
+            : 'Aceptas $servicio$cuando. El cliente verá tu dirección exacta '
+                  'y podrá escribirte.',
         siga: 'Confirmar',
       );
       if (!seguro) return;
@@ -617,7 +620,12 @@ class _ProfessionalAgendaScreenState extends State<ProfessionalAgendaScreen>
     final mensajero = ScaffoldMessenger.of(context);
 
     try {
-      await _cambiarEstado(cita.id, nuevoEstado, motivo: motivo);
+      await _cambiarEstado(
+        cita.id,
+        nuevoEstado,
+        motivo: motivo,
+        aDomicilio: aDomicilio,
+      );
 
       if (motivo != null) {
         final clienteId = datos['clientId'] as String?;
@@ -647,6 +655,7 @@ class _ProfessionalAgendaScreenState extends State<ProfessionalAgendaScreen>
     String citaId,
     String nuevoEstado, {
     String? motivo,
+    bool aDomicilio = false,
   }) async {
     final referencia = FirebaseFirestore.instance
         .collection('bookings')
@@ -656,7 +665,7 @@ class _ProfessionalAgendaScreenState extends State<ProfessionalAgendaScreen>
         nuevoEstado == 'confirmed' || nuevoEstado == 'cancelled';
 
     String? direccion;
-    if (nuevoEstado == 'confirmed') {
+    if (nuevoEstado == 'confirmed' && !aDomicilio) {
       final perfil = await FirebaseFirestore.instance
           .collection('users')
           .doc(_uid)

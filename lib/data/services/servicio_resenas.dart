@@ -95,6 +95,79 @@ class ServicioResenas {
     });
   }
 
+  Future<void> editar({
+    required String profesionalId,
+    required String citaId,
+    required int calificacion,
+    required String comentario,
+    List<String> fotos = const [],
+  }) async {
+    final refResena = _resenas(profesionalId).doc(citaId);
+    final refPerfil = _db.collection('users').doc(profesionalId);
+
+    await _db.runTransaction((transaccion) async {
+      final actual = await transaccion.get(refResena);
+      if (!actual.exists) throw const ResenaNoEncontrada();
+
+      final anterior = (actual.data()?['calificacion'] as num?)?.toInt() ?? 0;
+
+      final perfil = await transaccion.get(refPerfil);
+      final datos = perfil.data() ?? {};
+      final total = (datos['reviewsCount'] as num?)?.toInt() ?? 1;
+      final sumaPrevia = (datos['sumaCalificaciones'] as num?)?.toInt() ?? 0;
+
+      final suma = sumaPrevia - anterior + calificacion;
+
+      transaccion.update(refResena, {
+        'calificacion': calificacion,
+        'comentario': comentario.trim(),
+        'fotos': fotos,
+        'editadaEn': FieldValue.serverTimestamp(),
+      });
+
+      transaccion.set(refPerfil, {
+        'sumaCalificaciones': suma,
+        'rating': total <= 0
+            ? 0.0
+            : double.parse((suma / total).toStringAsFixed(1)),
+      }, SetOptions(merge: true));
+    });
+  }
+
+  Future<void> eliminar({
+    required String profesionalId,
+    required String citaId,
+  }) async {
+    final refResena = _resenas(profesionalId).doc(citaId);
+    final refPerfil = _db.collection('users').doc(profesionalId);
+
+    await _db.runTransaction((transaccion) async {
+      final actual = await transaccion.get(refResena);
+      if (!actual.exists) return;
+
+      final calificacion =
+          (actual.data()?['calificacion'] as num?)?.toInt() ?? 0;
+
+      final perfil = await transaccion.get(refPerfil);
+      final datos = perfil.data() ?? {};
+      final totalPrevio = (datos['reviewsCount'] as num?)?.toInt() ?? 0;
+      final sumaPrevia = (datos['sumaCalificaciones'] as num?)?.toInt() ?? 0;
+
+      final total = totalPrevio > 0 ? totalPrevio - 1 : 0;
+      final suma = sumaPrevia - calificacion;
+
+      transaccion.delete(refResena);
+
+      transaccion.set(refPerfil, {
+        'reviewsCount': total,
+        'sumaCalificaciones': total == 0 ? 0 : suma,
+        'rating': total == 0
+            ? 0.0
+            : double.parse((suma / total).toStringAsFixed(1)),
+      }, SetOptions(merge: true));
+    });
+  }
+
   Future<void> responder({
     required String profesionalId,
     required String resenaId,
@@ -113,4 +186,8 @@ class ServicioResenas {
 
 class ResenaDuplicada implements Exception {
   const ResenaDuplicada();
+}
+
+class ResenaNoEncontrada implements Exception {
+  const ResenaNoEncontrada();
 }

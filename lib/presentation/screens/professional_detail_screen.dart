@@ -683,7 +683,7 @@ class _PestanaInfo extends StatelessWidget {
                 SizedBox(
                   width: double.infinity,
                   child: OutlinedButton.icon(
-                    onPressed: () => MapaZonaProfesional.abrir(
+                    onPressed: () => MapaDeZona.abrir(
                       context,
                       nombre: datos['name'] ?? '',
                       ubicacion: ubicacion,

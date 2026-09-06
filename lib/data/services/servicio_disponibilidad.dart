@@ -147,18 +147,17 @@ class ServicioDisponibilidad {
     required DisponibilidadDia dia,
     required DateTime fecha,
   }) {
-    final horas = <String>{};
+    final delHorario = <String>{};
 
     final rango = horario.dias[fecha.weekday];
     if (rango != null) {
-      horas.addAll(_horasDelRango(rango, horario.intervaloMinutos));
+      delHorario.addAll(_horasDelRango(rango, horario.intervaloMinutos));
     }
-    horas.addAll(dia.extras);
 
-    final ordenadas = horas.toList()..sort();
+    final ordenadas = <String>{...delHorario, ...dia.extras}.toList()..sort();
 
     return ordenadas.map((hora) {
-      final esExtra = dia.extras.contains(hora);
+      final esExtra = dia.extras.contains(hora) && !delHorario.contains(hora);
       final tramo = _tramoQueCubre(dia, hora, horario.intervaloMinutos);
 
       if (tramo != null || dia.reservadas.containsKey(hora)) {

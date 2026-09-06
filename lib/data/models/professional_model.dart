@@ -20,6 +20,10 @@ class Professional {
 
   final bool soloDomicilio;
 
+  final bool vaADomicilio;
+
+  bool get atiendeEnSuLocal => !soloDomicilio;
+
   bool get apareceEnElMapa =>
       !soloDomicilio && latitude != null && longitude != null;
 
@@ -38,6 +42,7 @@ class Professional {
     this.longitude,
     this.aceptaCitas = true,
     this.soloDomicilio = false,
+    this.vaADomicilio = false,
   });
 
   factory Professional.fromMap(String id, Map<String, dynamic> data) {
@@ -56,6 +61,7 @@ class Professional {
       longitude: (data['longitud'] as num?)?.toDouble(),
       aceptaCitas: AjustesProfesional.desdeMapa(data).aceptandoClientas,
       soloDomicilio: AjustesProfesional.desdeMapa(data).soloDomicilio,
+      vaADomicilio: AjustesProfesional.desdeMapa(data).llegaADomicilio,
     );
   }
 }
