@@ -91,6 +91,8 @@ class TemaApp {
       ),
       filledButtonTheme: FilledButtonThemeData(
         style: FilledButton.styleFrom(
+          backgroundColor: negro,
+          foregroundColor: blanco,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(14),
           ),
@@ -98,11 +100,23 @@ class TemaApp {
       ),
       outlinedButtonTheme: OutlinedButtonThemeData(
         style: OutlinedButton.styleFrom(
+          foregroundColor: textoOscuro,
+          side: const BorderSide(color: grisBorde),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(14),
           ),
         ),
       ),
+      textButtonTheme: TextButtonThemeData(
+        style: TextButton.styleFrom(foregroundColor: textoOscuro),
+      ),
+      tabBarTheme: const TabBarThemeData(
+        labelColor: negro,
+        unselectedLabelColor: grisTexto,
+        indicatorColor: negro,
+        dividerColor: grisBorde,
+      ),
+      progressIndicatorTheme: const ProgressIndicatorThemeData(color: negro),
       navigationBarTheme: NavigationBarThemeData(
         backgroundColor: blanco,
         indicatorColor: grisClaro,

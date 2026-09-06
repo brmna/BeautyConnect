@@ -4,6 +4,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../data/models/ubicacion.dart';
 import '../../data/services/servicio_ubicacion_cita.dart';
 import '../../theme/app_theme.dart';
+import 'mapa_zonas.dart';
 import '../../utils/distancia.dart';
 import 'mensaje.dart';
 
@@ -79,6 +80,31 @@ class _BloqueDomicilioState extends State<BloqueDomicilio> {
     );
   }
 
+  Ubicacion? get _zonaCliente {
+    final latitud = (widget.cita['latitudZonaCliente'] as num?)?.toDouble();
+    final longitud = (widget.cita['longitudZonaCliente'] as num?)?.toDouble();
+    if (latitud == null || longitud == null) return null;
+
+    return Ubicacion(
+      barrio: (widget.cita['barrioCliente'] as String?)?.trim() ?? '',
+      latitud: latitud,
+      longitud: longitud,
+    );
+  }
+
+  void _verZona() {
+    final zona = _zonaCliente;
+    if (zona == null) return;
+
+    MapaDeZona.abrir(
+      context,
+      nombre: 'C',
+      ubicacion: zona,
+      titulo: 'Dónde tendrías que ir',
+      nota: MapaDeZona.notaProfesional,
+    );
+  }
+
   String get _sector {
     final barrio = (widget.cita['barrioCliente'] as String?)?.trim() ?? '';
     return barrio.isEmpty ? 'Villavicencio' : barrio;
@@ -141,10 +167,42 @@ class _BloqueDomicilioState extends State<BloqueDomicilio> {
               ],
             ),
             const SizedBox(height: 6),
-            Text(
-              tieneExacta ? exacta!.resumen : 'Zona de $_sector',
-              style: const TextStyle(fontSize: 13, color: TemaApp.textoOscuro),
-            ),
+            if (tieneExacta)
+              Text(
+                exacta!.resumen,
+                style: const TextStyle(
+                  fontSize: 13,
+                  color: TemaApp.textoOscuro,
+                ),
+              )
+            else
+              GestureDetector(
+                onTap: _zonaCliente == null ? null : _verZona,
+                child: Row(
+                  children: [
+                    Flexible(
+                      child: Text(
+                        'Zona de $_sector',
+                        style: TextStyle(
+                          fontSize: 13,
+                          color: TemaApp.textoOscuro,
+                          decoration: _zonaCliente == null
+                              ? null
+                              : TextDecoration.underline,
+                        ),
+                      ),
+                    ),
+                    if (_zonaCliente != null) ...[
+                      const SizedBox(width: 4),
+                      const Icon(
+                        Icons.map_outlined,
+                        size: 15,
+                        color: TemaApp.grisSubtitulo,
+                      ),
+                    ],
+                  ],
+                ),
+              ),
             if (distancia != null) ...[
               const SizedBox(height: 4),
               Row(

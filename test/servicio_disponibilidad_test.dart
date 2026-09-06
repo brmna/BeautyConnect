@@ -284,6 +284,37 @@ void main() {
       expect(franjasDe('09:00', '09:00'), isEmpty);
     });
   });
+
+  group('una franja extra que ya esta en el horario', () {
+    List<FranjaHoraria> conExtra(String extra) => servicio.generarFranjas(
+      horario: horarioDe(inicio: '09:00', fin: '12:00', intervalo: 60),
+      dia: DisponibilidadDia.desdeMapa({
+        'extras': [extra],
+      }),
+      fecha: miercoles,
+    );
+
+    test('no duplica la franja', () {
+      final franjas = conExtra('10:00');
+
+      expect(franjas.where((f) => f.hora == '10:00'), hasLength(1));
+      expect(franjas, hasLength(3));
+    });
+
+    test('no la marca como agregada, porque ya venia del horario', () {
+      final diez = conExtra('10:00').firstWhere((f) => f.hora == '10:00');
+
+      expect(diez.esExtra, isFalse);
+    });
+
+    test('una hora fuera del horario si queda como agregada', () {
+      final franjas = conExtra('15:00');
+      final tarde = franjas.firstWhere((f) => f.hora == '15:00');
+
+      expect(franjas, hasLength(4));
+      expect(tarde.esExtra, isTrue);
+    });
+  });
 }
 
 void pruebasDeTramosOcupados() {

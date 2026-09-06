@@ -230,4 +230,45 @@ void main() {
       expect(hace(momento, ahora: ahora), 'Ahora');
     });
   });
+
+  group('el nombre de la otra persona', () {
+    test('la manicurista ve quien canceló', () {
+      final novedad = novedadDeCita('c1', {
+        'status': 'cancelled',
+        'canceladaPor': 'cliente',
+        'clientId': 'cliente7',
+        'serviceName': 'Manicure',
+        'respondidoEn': Timestamp.fromDate(DateTime(2026, 9, 2, 10)),
+      }, esProfesional: true);
+
+      expect(novedad, isNotNull);
+      expect(novedad!.personaId, 'cliente7');
+      expect(novedad.tituloCon('Samuel'), 'Samuel canceló su cita');
+    });
+
+    test('la clienta ve quien confirmó', () {
+      final novedad = novedadDeCita('c2', {
+        'status': 'confirmed',
+        'professionalId': 'pro9',
+        'serviceName': 'Gel',
+        'respondidoEn': Timestamp.fromDate(DateTime(2026, 9, 2, 10)),
+      }, esProfesional: false);
+
+      expect(novedad!.personaId, 'pro9');
+      expect(novedad.tituloCon('Ana'), 'Ana confirmó tu cita');
+    });
+
+    test('sin nombre se queda con el titulo generico', () {
+      final novedad = novedadDeCita('c3', {
+        'status': 'pending',
+        'clientId': 'cliente7',
+        'serviceName': 'Manicure',
+        'createdAt': Timestamp.fromDate(DateTime(2026, 9, 2, 10)),
+      }, esProfesional: true);
+
+      expect(novedad!.tituloCon(null), 'Nueva solicitud de cita');
+      expect(novedad.tituloCon('   '), 'Nueva solicitud de cita');
+      expect(novedad.tituloCon('Samuel'), 'Samuel te pidió una cita');
+    });
+  });
 }

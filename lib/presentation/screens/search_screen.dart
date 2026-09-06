@@ -11,10 +11,8 @@ import '../../data/services/servicio_subida_imagenes.dart';
 import '../../theme/app_theme.dart';
 import '../../utils/distancia.dart';
 import '../../utils/formato.dart';
-import '../../utils/margenes.dart';
 import '../widgets/barra_ocultable.dart';
 import '../widgets/cabecera_pantalla.dart';
-import '../widgets/hoja_modal.dart';
 import '../widgets/mensaje.dart';
 import '../widgets/recarga_manual.dart';
 import '../widgets/mapa_zonas.dart';
@@ -90,6 +88,7 @@ class _SearchScreenState extends State<SearchScreen>
   FiltroModalidad _modalidad = FiltroModalidad.todas;
   Position? _miUbicacion;
   bool _buscandoUbicacion = false;
+  int _peticionUbicacion = 0;
 
   @override
   bool get anclarCabecera => _busqueda.isNotEmpty || _enMapa;
@@ -273,7 +272,11 @@ class _SearchScreenState extends State<SearchScreen>
     mostrarCabecera();
 
     if (orden != OrdenBusqueda.distancia) {
-      setState(() => _orden = orden);
+      _peticionUbicacion++;
+      setState(() {
+        _orden = orden;
+        _buscandoUbicacion = false;
+      });
       return;
     }
 
@@ -282,6 +285,9 @@ class _SearchScreenState extends State<SearchScreen>
       return;
     }
 
+    if (_buscandoUbicacion) return;
+
+    final peticion = ++_peticionUbicacion;
     setState(() => _buscandoUbicacion = true);
     final mensajero = ScaffoldMessenger.of(context);
 
@@ -293,19 +299,21 @@ class _SearchScreenState extends State<SearchScreen>
 
       if (permiso == LocationPermission.denied ||
           permiso == LocationPermission.deniedForever) {
-        mensajero.showSnackBar(
-          construirMensaje(
-            'Necesitamos tu ubicación para ordenar por cercanía',
-            tipo: TipoAviso.aviso,
-          ),
-        );
+        if (peticion == _peticionUbicacion) {
+          mensajero.showSnackBar(
+            construirMensaje(
+              'Necesitamos tu ubicación para ordenar por cercanía',
+              tipo: TipoAviso.aviso,
+            ),
+          );
+        }
       } else {
         final posicion = await Geolocator.getCurrentPosition(
           locationSettings: const LocationSettings(
             accuracy: LocationAccuracy.medium,
           ),
         );
-        if (mounted) {
+        if (mounted && peticion == _peticionUbicacion) {
           setState(() {
             _miUbicacion = posicion;
             _orden = OrdenBusqueda.distancia;
@@ -313,15 +321,19 @@ class _SearchScreenState extends State<SearchScreen>
         }
       }
     } catch (_) {
-      mensajero.showSnackBar(
-        construirMensaje(
-          'No se pudo obtener tu ubicación',
-          tipo: TipoAviso.error,
-        ),
-      );
+      if (peticion == _peticionUbicacion) {
+        mensajero.showSnackBar(
+          construirMensaje(
+            'No se pudo obtener tu ubicación',
+            tipo: TipoAviso.error,
+          ),
+        );
+      }
     }
 
-    if (mounted) setState(() => _buscandoUbicacion = false);
+    if (mounted && peticion == _peticionUbicacion) {
+      setState(() => _buscandoUbicacion = false);
+    }
   }
 
   double? _distanciaA(Professional profesional) {
@@ -377,19 +389,43 @@ class _SearchScreenState extends State<SearchScreen>
             setState(() => _enMapa = indice == 1);
           },
         ),
-        if (!_enMapa)
-          Padding(
-            padding: const EdgeInsets.fromLTRB(14, 8, 14, 2),
-            child: Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: [
-                ...FiltroModalidad.values.map(_chipModalidad),
-                _chipOrden(),
-              ],
+        if (!_enMapa) ...[
+          _grupoFiltros(
+            'Mostrar',
+            FiltroModalidad.values.map(_chipModalidad).toList(),
+          ),
+          _grupoFiltros(
+            'Ordenar',
+            OrdenBusqueda.values.map(_chipOrden).toList(),
+          ),
+        ],
+      ],
+    );
+  }
+
+  Widget _grupoFiltros(String etiqueta, List<Widget> chips) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(14, 6, 14, 0),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            width: 62,
+            child: Padding(
+              padding: const EdgeInsets.only(top: 7),
+              child: Text(
+                etiqueta,
+                style: const TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w600,
+                  color: TemaApp.grisTexto,
+                ),
+              ),
             ),
           ),
-      ],
+          Expanded(child: Wrap(spacing: 8, runSpacing: 8, children: chips)),
+        ],
+      ),
     );
   }
 
@@ -423,76 +459,38 @@ class _SearchScreenState extends State<SearchScreen>
     );
   }
 
-  Widget _chipOrden() {
-    final ordenando = _orden != OrdenBusqueda.relevancia;
+  Widget _chipOrden(OrdenBusqueda orden) {
+    final activo = orden == _orden;
+    final cargando = _buscandoUbicacion && orden == OrdenBusqueda.distancia;
 
-    return ActionChip(
-      onPressed: _elegirOrden,
-      avatar: _buscandoUbicacion
+    return ChoiceChip(
+      selected: activo,
+      showCheckmark: false,
+      onSelected: (_) => _cambiarOrden(orden),
+      avatar: cargando
           ? const SizedBox(
               width: 14,
               height: 14,
               child: CircularProgressIndicator(strokeWidth: 2),
             )
           : Icon(
-              Icons.swap_vert,
+              orden.icono,
               size: 15,
-              color: ordenando ? TemaApp.blanco : TemaApp.grisSubtitulo,
+              color: activo ? TemaApp.blanco : TemaApp.grisSubtitulo,
             ),
-      label: Text(ordenando ? _orden.etiqueta : 'Ordenar'),
+      label: Text(orden.etiqueta),
       labelStyle: TextStyle(
         fontSize: 12,
-        color: ordenando ? TemaApp.blanco : TemaApp.textoOscuro,
-        fontWeight: ordenando ? FontWeight.w600 : FontWeight.normal,
+        color: activo ? TemaApp.blanco : TemaApp.textoOscuro,
+        fontWeight: activo ? FontWeight.w600 : FontWeight.normal,
       ),
-      backgroundColor: ordenando ? TemaApp.negro : TemaApp.blanco,
+      selectedColor: TemaApp.negro,
+      backgroundColor: TemaApp.blanco,
       side: BorderSide.none,
       visualDensity: VisualDensity.compact,
       materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
     );
-  }
-
-  Future<void> _elegirOrden() async {
-    final elegido = await abrirHoja<OrdenBusqueda>(
-      context,
-      hijo: Padding(
-        padding: EdgeInsets.only(
-          left: 8,
-          right: 8,
-          top: 4,
-          bottom: margenHoja(context, base: 12),
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Padding(
-              padding: EdgeInsets.fromLTRB(12, 0, 12, 8),
-              child: Text(
-                'Ordenar por',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-              ),
-            ),
-            ...OrdenBusqueda.values.map(
-              (orden) => ListTile(
-                onTap: () => Navigator.pop(context, orden),
-                leading: Icon(orden.icono, size: 20),
-                title: Text(
-                  orden.etiqueta,
-                  style: const TextStyle(fontSize: 14),
-                ),
-                trailing: orden == _orden
-                    ? const Icon(Icons.check, size: 20, color: TemaApp.negro)
-                    : null,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-
-    if (elegido != null) await _cambiarOrden(elegido);
   }
 
   Widget _cabecera() {

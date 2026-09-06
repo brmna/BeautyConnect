@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 
+import '../../data/models/resena.dart';
 import '../../data/services/servicio_resenas.dart';
 import '../../data/services/servicio_subida_imagenes.dart';
 import '../../theme/app_theme.dart';
+import 'adjuntar_fotos.dart';
 import 'estrellas.dart';
 import 'mensaje.dart';
 import '../../utils/margenes.dart';
@@ -19,6 +21,8 @@ class HojaCalificar extends StatefulWidget {
   final String? profesionalFoto;
   final String? clienteFoto;
 
+  final Resena? existente;
+
   const HojaCalificar({
     super.key,
     required this.profesionalId,
@@ -29,6 +33,7 @@ class HojaCalificar extends StatefulWidget {
     required this.servicio,
     this.profesionalFoto,
     this.clienteFoto,
+    this.existente,
   });
 
   @override
@@ -44,6 +49,20 @@ class _HojaCalificarState extends State<HojaCalificar> {
   final List<String> _fotos = [];
   bool _guardando = false;
   bool _subiendoFoto = false;
+
+  bool get _editando => widget.existente != null;
+
+  @override
+  void initState() {
+    super.initState();
+
+    final previa = widget.existente;
+    if (previa == null) return;
+
+    _calificacion = previa.calificacion;
+    _comentarioCtrl.text = previa.comentario;
+    _fotos.addAll(previa.fotos);
+  }
 
   @override
   void dispose() {
@@ -105,6 +124,21 @@ class _HojaCalificarState extends State<HojaCalificar> {
     final navegador = Navigator.of(context);
 
     try {
+      if (_editando) {
+        await _servicio.editar(
+          profesionalId: widget.profesionalId,
+          citaId: widget.citaId,
+          calificacion: _calificacion,
+          comentario: _comentarioCtrl.text,
+          fotos: _fotos,
+        );
+        navegador.pop(true);
+        mensajero.showSnackBar(
+          construirMensaje('Reseña actualizada', tipo: TipoAviso.exito),
+        );
+        return;
+      }
+
       await _servicio.publicar(
         profesionalId: widget.profesionalId,
         profesionalNombre: widget.profesionalNombre,
@@ -212,70 +246,12 @@ class _HojaCalificarState extends State<HojaCalificar> {
               ),
             ),
             const SizedBox(height: 16),
-            Row(
-              children: [
-                const Text(
-                  'Fotos del resultado',
-                  style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
-                ),
-                const Spacer(),
-                TextButton.icon(
-                  onPressed: _subiendoFoto ? null : _agregarFoto,
-                  icon: _subiendoFoto
-                      ? const SizedBox(
-                          width: 14,
-                          height: 14,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        )
-                      : const Icon(Icons.add_a_photo_outlined, size: 16),
-                  label: const Text('Agregar'),
-                ),
-              ],
+            AdjuntarFotos(
+              fotos: _fotos,
+              subiendo: _subiendoFoto,
+              onAgregar: _agregarFoto,
+              onQuitar: (indice) => setState(() => _fotos.removeAt(indice)),
             ),
-            if (_fotos.isNotEmpty)
-              SizedBox(
-                height: 78,
-                child: ListView.separated(
-                  scrollDirection: Axis.horizontal,
-                  itemCount: _fotos.length,
-                  separatorBuilder: (_, _) => const SizedBox(width: 8),
-                  itemBuilder: (context, indice) => Stack(
-                    children: [
-                      ClipRRect(
-                        borderRadius: BorderRadius.circular(10),
-                        child: Image.network(
-                          ServicioSubidaImagenes.miniatura(
-                            _fotos[indice],
-                            ancho: 200,
-                          ),
-                          width: 78,
-                          height: 78,
-                          fit: BoxFit.cover,
-                        ),
-                      ),
-                      Positioned(
-                        top: 2,
-                        right: 2,
-                        child: GestureDetector(
-                          onTap: () => setState(() => _fotos.removeAt(indice)),
-                          child: Container(
-                            padding: const EdgeInsets.all(3),
-                            decoration: const BoxDecoration(
-                              color: Colors.black54,
-                              shape: BoxShape.circle,
-                            ),
-                            child: const Icon(
-                              Icons.close,
-                              size: 12,
-                              color: Colors.white,
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
             const SizedBox(height: 20),
             SizedBox(
               width: double.infinity,
@@ -290,7 +266,7 @@ class _HojaCalificarState extends State<HojaCalificar> {
                 ),
                 child: _guardando
                     ? const CircularProgressIndicator(color: Colors.white)
-                    : const Text('Publicar reseña'),
+                    : Text(_editando ? 'Guardar cambios' : 'Publicar reseña'),
               ),
             ),
           ],

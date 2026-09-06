@@ -19,13 +19,29 @@ class Novedad {
   final String detalle;
   final DateTime momento;
 
+  final String personaId;
+
+  final String? plantilla;
+
   const Novedad({
     required this.citaId,
     required this.tipo,
     required this.titulo,
     required this.detalle,
     required this.momento,
+    this.personaId = '',
+    this.plantilla,
   });
+
+  static const String marcaNombre = '{nombre}';
+
+  String tituloCon(String? nombre) {
+    final limpio = nombre?.trim() ?? '';
+    final texto = plantilla;
+    if (texto == null || limpio.isEmpty) return titulo;
+
+    return texto.replaceAll(marcaNombre, limpio);
+  }
 }
 
 DateTime? _sello(Object? datos, String clave) {
@@ -55,11 +71,18 @@ Novedad? novedadDeCita(
   final estado = (cita['status'] as String?) ?? 'pending';
   if (estado == 'completed') return null;
 
+  final personaId =
+      (esProfesional
+          ? cita['clientId'] as String?
+          : cita['professionalId'] as String?) ??
+      '';
+
   Novedad? armar({
     required TipoNovedad tipo,
     required String titulo,
     required String detalle,
     required DateTime? momento,
+    String? plantilla,
   }) {
     if (momento == null) return null;
 
@@ -69,6 +92,8 @@ Novedad? novedadDeCita(
       titulo: titulo,
       detalle: detalle,
       momento: momento,
+      personaId: personaId,
+      plantilla: plantilla,
     );
   }
 
@@ -89,6 +114,7 @@ Novedad? novedadDeCita(
         titulo: esProfesional
             ? 'Una solicitud se venció'
             : 'Tu solicitud venció',
+        plantilla: esProfesional ? 'La solicitud de {nombre} se venció' : null,
         detalle: '${_servicio(cita)} · nadie la respondió a tiempo',
         momento: momento,
       );
@@ -99,6 +125,9 @@ Novedad? novedadDeCita(
       titulo: esProfesional
           ? 'Un cliente canceló su cita'
           : 'Cancelaron tu cita',
+      plantilla: esProfesional
+          ? '{nombre} canceló su cita'
+          : '{nombre} canceló tu cita',
       detalle: _conMotivo(cita),
       momento: momento,
     );
@@ -111,6 +140,7 @@ Novedad? novedadDeCita(
       return armar(
         tipo: TipoNovedad.cambioPedido,
         titulo: 'Te piden otro horario',
+        plantilla: '{nombre} pide otro horario',
         detalle: _servicio(cita),
         momento: _sello(cita[CambioSolicitado.clave], 'pedidoEn') ?? creada,
       );
@@ -120,6 +150,7 @@ Novedad? novedadDeCita(
       return armar(
         tipo: TipoNovedad.solicitudNueva,
         titulo: 'Nueva solicitud de cita',
+        plantilla: '{nombre} te pidió una cita',
         detalle: _servicio(cita),
         momento: creada,
       );
@@ -131,6 +162,7 @@ Novedad? novedadDeCita(
       return armar(
         tipo: TipoNovedad.citaNueva,
         titulo: 'Tienes una cita nueva',
+        plantilla: '{nombre} reservó contigo',
         detalle: '${_servicio(cita)} · se aceptó sola',
         momento: creada,
       );
@@ -145,6 +177,7 @@ Novedad? novedadDeCita(
     return armar(
       tipo: TipoNovedad.movida,
       titulo: 'Te movieron la hora',
+      plantilla: '{nombre} movió la hora',
       detalle: _servicio(cita),
       momento: movida,
     );
@@ -153,6 +186,7 @@ Novedad? novedadDeCita(
   return armar(
     tipo: TipoNovedad.confirmada,
     titulo: 'Te confirmaron la cita',
+    plantilla: '{nombre} confirmó tu cita',
     detalle: _servicio(cita),
     momento: respondida,
   );

@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 
+import '../../data/services/cache_perfiles.dart';
 import '../../theme/app_theme.dart';
 import '../../utils/margenes.dart';
 import '../../utils/novedades.dart';
@@ -24,6 +25,8 @@ class BotonNovedades extends StatefulWidget {
 }
 
 class _BotonNovedadesState extends State<BotonNovedades> {
+  final _perfiles = CachePerfiles();
+
   DateTime? _vistoAqui;
 
   DocumentReference<Map<String, dynamic>> get _perfil =>
@@ -55,7 +58,11 @@ class _BotonNovedadesState extends State<BotonNovedades> {
 
     final verCitas = await abrirHoja<bool>(
       context,
-      hijo: _HojaNovedades(novedades: novedades),
+      hijo: _HojaNovedades(
+        novedades: novedades,
+        perfiles: _perfiles,
+        esProfesional: widget.esProfesional,
+      ),
     );
 
     if (verCitas == true) widget.onVerCitas?.call();
@@ -105,8 +112,14 @@ class _BotonNovedadesState extends State<BotonNovedades> {
 
 class _HojaNovedades extends StatelessWidget {
   final List<Novedad> novedades;
+  final CachePerfiles perfiles;
+  final bool esProfesional;
 
-  const _HojaNovedades({required this.novedades});
+  const _HojaNovedades({
+    required this.novedades,
+    required this.perfiles,
+    required this.esProfesional,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -155,6 +168,8 @@ class _HojaNovedades extends StatelessWidget {
                 separatorBuilder: (_, _) => const Divider(height: 18),
                 itemBuilder: (_, indice) => _Fila(
                   novedad: novedades[indice],
+                  perfiles: perfiles,
+                  esProfesional: esProfesional,
                   onTocar: () => Navigator.pop(context, true),
                 ),
               ),
@@ -167,9 +182,16 @@ class _HojaNovedades extends StatelessWidget {
 
 class _Fila extends StatelessWidget {
   final Novedad novedad;
+  final CachePerfiles perfiles;
+  final bool esProfesional;
   final VoidCallback onTocar;
 
-  const _Fila({required this.novedad, required this.onTocar});
+  const _Fila({
+    required this.novedad,
+    required this.perfiles,
+    required this.esProfesional,
+    required this.onTocar,
+  });
 
   ({IconData icono, Color color}) get _aspecto {
     return switch (novedad.tipo) {
@@ -230,12 +252,10 @@ class _Fila extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    novedad.titulo,
-                    style: const TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                    ),
+                  _Titulo(
+                    novedad: novedad,
+                    perfiles: perfiles,
+                    esProfesional: esProfesional,
                   ),
                   const SizedBox(height: 2),
                   Text(
@@ -258,6 +278,36 @@ class _Fila extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+}
+
+class _Titulo extends StatelessWidget {
+  final Novedad novedad;
+  final CachePerfiles perfiles;
+  final bool esProfesional;
+
+  const _Titulo({
+    required this.novedad,
+    required this.perfiles,
+    required this.esProfesional,
+  });
+
+  static const _estilo = TextStyle(fontSize: 14, fontWeight: FontWeight.w600);
+
+  @override
+  Widget build(BuildContext context) {
+    if (novedad.plantilla == null || novedad.personaId.isEmpty) {
+      return Text(novedad.titulo, style: _estilo);
+    }
+
+    return FutureBuilder<({String nombre, String? foto})>(
+      future: perfiles.resumen(novedad.personaId),
+      builder: (context, instantanea) {
+        final nombre = instantanea.data?.nombre;
+
+        return Text(novedad.tituloCon(nombre), style: _estilo);
+      },
     );
   }
 }

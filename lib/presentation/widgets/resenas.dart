@@ -120,6 +120,8 @@ class ListaResenas extends StatelessWidget {
   final String textoVacio;
 
   final void Function(Resena resena)? onResponder;
+  final void Function(Resena resena)? onEditar;
+  final void Function(Resena resena)? onEliminar;
 
   const ListaResenas({
     super.key,
@@ -127,6 +129,8 @@ class ListaResenas extends StatelessWidget {
     required this.perspectiva,
     this.textoVacio = 'Nada por aquí todavía',
     this.onResponder,
+    this.onEditar,
+    this.onEliminar,
   });
 
   @override
@@ -152,6 +156,8 @@ class ListaResenas extends StatelessWidget {
         resena: resenas[indice],
         perspectiva: perspectiva,
         onResponder: onResponder,
+        onEditar: onEditar,
+        onEliminar: onEliminar,
       ),
     );
   }
@@ -161,13 +167,19 @@ class TarjetaResena extends StatelessWidget {
   final Resena resena;
   final PerspectivaResena perspectiva;
   final void Function(Resena resena)? onResponder;
+  final void Function(Resena resena)? onEditar;
+  final void Function(Resena resena)? onEliminar;
 
   const TarjetaResena({
     super.key,
     required this.resena,
     required this.perspectiva,
     this.onResponder,
+    this.onEditar,
+    this.onEliminar,
   });
+
+  bool get _puedeGestionar => onEditar != null || onEliminar != null;
 
   bool get _mirandoRecibidas => perspectiva == PerspectivaResena.recibidas;
 
@@ -210,6 +222,28 @@ class TarjetaResena extends StatelessWidget {
             if (resena.tieneRespuesta) ...[
               const SizedBox(height: 12),
               _respuesta(),
+            ],
+            if (_puedeGestionar) ...[
+              const SizedBox(height: 4),
+              Row(
+                children: [
+                  if (onEditar != null)
+                    TextButton.icon(
+                      onPressed: () => onEditar!(resena),
+                      icon: const Icon(Icons.edit_outlined, size: 16),
+                      label: const Text('Editar'),
+                    ),
+                  if (onEliminar != null)
+                    TextButton.icon(
+                      onPressed: () => onEliminar!(resena),
+                      style: TextButton.styleFrom(
+                        foregroundColor: TemaApp.error,
+                      ),
+                      icon: const Icon(Icons.delete_outline, size: 16),
+                      label: const Text('Eliminar'),
+                    ),
+                ],
+              ),
             ],
             ?responder,
           ],

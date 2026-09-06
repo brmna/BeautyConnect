@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 
 import '../../data/services/servicio_resenas_clientes.dart';
+import '../../data/services/servicio_subida_imagenes.dart';
 import '../../theme/app_theme.dart';
+import 'adjuntar_fotos.dart';
 import '../../utils/margenes.dart';
 import '../../utils/validaciones.dart';
 import 'estrellas.dart';
@@ -15,6 +17,8 @@ class HojaCalificarCliente extends StatefulWidget {
   final String profesionalNombre;
   final String servicio;
 
+  final ResenaCliente? existente;
+
   const HojaCalificarCliente({
     super.key,
     required this.citaId,
@@ -23,6 +27,7 @@ class HojaCalificarCliente extends StatefulWidget {
     required this.profesionalId,
     required this.profesionalNombre,
     required this.servicio,
+    this.existente,
   });
 
   @override
@@ -31,10 +36,27 @@ class HojaCalificarCliente extends StatefulWidget {
 
 class _HojaCalificarClienteState extends State<HojaCalificarCliente> {
   final _servicio = ServicioResenasClientes();
+  final _subida = ServicioSubidaImagenes();
   final _comentarioCtrl = TextEditingController();
+  final _fotos = <String>[];
 
   int _calificacion = 0;
   bool _guardando = false;
+  bool _subiendoFoto = false;
+
+  bool get _editando => widget.existente != null;
+
+  @override
+  void initState() {
+    super.initState();
+
+    final previa = widget.existente;
+    if (previa == null) return;
+
+    _calificacion = previa.calificacion;
+    _comentarioCtrl.text = previa.comentario;
+    _fotos.addAll(previa.fotos);
+  }
 
   @override
   void dispose() {
@@ -51,6 +73,35 @@ class _HojaCalificarClienteState extends State<HojaCalificarCliente> {
     _ => 'Toca las estrellas para calificar',
   };
 
+  Future<void> _agregarFoto() async {
+    final mensajero = ScaffoldMessenger.of(context);
+
+    if (!_subida.estaConfigurado) {
+      mensajero.showSnackBar(
+        construirMensaje(
+          'La subida de fotos no está disponible',
+          tipo: TipoAviso.info,
+        ),
+      );
+      return;
+    }
+
+    try {
+      final archivo = await _subida.elegirImagen(desdeCamara: false);
+      if (archivo == null) return;
+
+      setState(() => _subiendoFoto = true);
+      final imagen = await _subida.subir(archivo);
+      if (mounted) setState(() => _fotos.add(imagen.url));
+    } catch (_) {
+      mensajero.showSnackBar(
+        construirMensaje('No se pudo subir la foto', tipo: TipoAviso.error),
+      );
+    }
+
+    if (mounted) setState(() => _subiendoFoto = false);
+  }
+
   Future<void> _publicar() async {
     if (_calificacion == 0) return;
 
@@ -59,6 +110,21 @@ class _HojaCalificarClienteState extends State<HojaCalificarCliente> {
     final navegador = Navigator.of(context);
 
     try {
+      if (_editando) {
+        await _servicio.editar(
+          clienteId: widget.clienteId,
+          citaId: widget.citaId,
+          calificacion: _calificacion,
+          comentario: _comentarioCtrl.text,
+          fotos: _fotos,
+        );
+        navegador.pop(true);
+        mensajero.showSnackBar(
+          construirMensaje('Calificación actualizada', tipo: TipoAviso.exito),
+        );
+        return;
+      }
+
       await _servicio.publicar(
         clienteId: widget.clienteId,
         profesionalId: widget.profesionalId,
@@ -67,6 +133,7 @@ class _HojaCalificarClienteState extends State<HojaCalificarCliente> {
         servicio: widget.servicio,
         calificacion: _calificacion,
         comentario: _comentarioCtrl.text,
+        fotos: _fotos,
       );
 
       navegador.pop(true);
@@ -145,6 +212,14 @@ class _HojaCalificarClienteState extends State<HojaCalificarCliente> {
               hintText: '¿Llegó a tiempo? ¿Cómo fue el trato?',
               alignLabelWithHint: true,
             ),
+          ),
+          const SizedBox(height: 16),
+          AdjuntarFotos(
+            titulo: 'Fotos del trabajo',
+            fotos: _fotos,
+            subiendo: _subiendoFoto,
+            onAgregar: _agregarFoto,
+            onQuitar: (indice) => setState(() => _fotos.removeAt(indice)),
           ),
           const SizedBox(height: 20),
           SizedBox(

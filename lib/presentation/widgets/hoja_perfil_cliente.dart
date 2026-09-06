@@ -5,8 +5,11 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../../utils/margenes.dart';
 import '../../data/services/servicio_clientes.dart';
+import '../../data/services/servicio_subida_imagenes.dart';
 import '../screens/chat_screen.dart';
+import 'confirmacion.dart';
 import 'hoja_modal.dart';
+import 'visor_fotos.dart';
 import '../../data/services/servicio_resenas_clientes.dart';
 import '../../theme/app_theme.dart';
 import '../../utils/formato.dart';
@@ -87,7 +90,10 @@ class HojaPerfilCliente extends StatelessWidget {
                     precargado: resumenPrecargado,
                   ),
                   const SizedBox(height: 20),
-                  _Calificaciones(clienteId: clienteId),
+                  _Calificaciones(
+                    clienteId: clienteId,
+                    profesionalId: profesionalId,
+                  ),
                 ],
               );
             },
@@ -466,8 +472,9 @@ class _FilaVisita extends StatelessWidget {
 
 class _Calificaciones extends StatefulWidget {
   final String clienteId;
+  final String profesionalId;
 
-  const _Calificaciones({required this.clienteId});
+  const _Calificaciones({required this.clienteId, required this.profesionalId});
 
   @override
   State<_Calificaciones> createState() => _CalificacionesState();
@@ -476,6 +483,38 @@ class _Calificaciones extends StatefulWidget {
 class _CalificacionesState extends State<_Calificaciones> {
   static const _visiblesAlPrincipio = 3;
   bool _todas = false;
+
+  Future<void> _eliminar(ResenaCliente resena) async {
+    final seguro = await confirmar(
+      context,
+      titulo: 'Eliminar tu calificación',
+      mensaje:
+          'Se borra tu comentario y tu nota deja de contar en el promedio '
+          'de este cliente.',
+      siga: 'Eliminar',
+      destructiva: true,
+    );
+    if (!seguro || !mounted) return;
+
+    final mensajero = ScaffoldMessenger.of(context);
+
+    try {
+      await ServicioResenasClientes().eliminar(
+        clienteId: widget.clienteId,
+        citaId: resena.citaId,
+      );
+      mensajero.showSnackBar(
+        construirMensaje('Calificación eliminada', tipo: TipoAviso.exito),
+      );
+    } catch (_) {
+      mensajero.showSnackBar(
+        construirMensaje(
+          'No se pudo eliminar la calificación',
+          tipo: TipoAviso.error,
+        ),
+      );
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -504,7 +543,13 @@ class _CalificacionesState extends State<_Calificaciones> {
               style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 10),
-            ...mostradas.map((resena) => _Comentario(resena: resena)),
+            ...mostradas.map(
+              (resena) => _Comentario(
+                resena: resena,
+                mia: resena.profesionalId == widget.profesionalId,
+                onEliminar: () => _eliminar(resena),
+              ),
+            ),
             if (ocultas > 0)
               TextButton(
                 onPressed: () => setState(() => _todas = true),
@@ -528,8 +573,14 @@ class _CalificacionesState extends State<_Calificaciones> {
 
 class _Comentario extends StatelessWidget {
   final ResenaCliente resena;
+  final bool mia;
+  final VoidCallback onEliminar;
 
-  const _Comentario({required this.resena});
+  const _Comentario({
+    required this.resena,
+    required this.mia,
+    required this.onEliminar,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -582,6 +633,54 @@ class _Comentario extends StatelessWidget {
               ),
             ),
           ],
+          if (resena.tieneFotos) ...[
+            const SizedBox(height: 8),
+            SizedBox(
+              height: 72,
+              child: ListView.separated(
+                scrollDirection: Axis.horizontal,
+                itemCount: resena.fotos.length,
+                separatorBuilder: (_, _) => const SizedBox(width: 8),
+                itemBuilder: (context, indice) => GestureDetector(
+                  onTap: () => VisorFotos.abrir(
+                    context,
+                    fotos: resena.fotos,
+                    inicial: indice,
+                  ),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(10),
+                    child: Image.network(
+                      ServicioSubidaImagenes.miniatura(
+                        resena.fotos[indice],
+                        ancho: 200,
+                      ),
+                      width: 72,
+                      height: 72,
+                      fit: BoxFit.cover,
+                      errorBuilder: (_, _, _) =>
+                          Container(width: 72, color: TemaApp.grisBorde),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ],
+          if (mia)
+            Align(
+              alignment: Alignment.centerRight,
+              child: TextButton.icon(
+                onPressed: onEliminar,
+                style: TextButton.styleFrom(
+                  foregroundColor: TemaApp.error,
+                  visualDensity: VisualDensity.compact,
+                ),
+                icon: const Icon(Icons.delete_outline, size: 15),
+                label: const Text(
+                  'Eliminar la mía',
+                  style: TextStyle(fontSize: 12),
+                ),
+              ),
+            ),
         ],
       ),
     );

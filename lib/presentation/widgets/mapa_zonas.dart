@@ -106,42 +106,60 @@ class _MapaZonasState extends State<MapaZonas> {
           left: 12,
           right: 12,
           bottom: margenInferior(context, base: 12),
-          child: const _Nota(),
+          child: const _Nota(texto: MapaDeZona.notaCliente),
         ),
       ],
     );
   }
 }
 
-class MapaZonaProfesional extends StatefulWidget {
+class MapaDeZona extends StatefulWidget {
   final String nombre;
   final Ubicacion ubicacion;
+  final String titulo;
+  final String nota;
 
-  const MapaZonaProfesional({
+  static const String notaCliente =
+      'Se muestra la zona, no la dirección exacta. La recibes cuando '
+      'confirme tu cita.';
+
+  static const String notaProfesional =
+      'Se muestra la zona aproximada. Al aceptar la cita verás la dirección '
+      'exacta y podrás abrir la ruta.';
+
+  const MapaDeZona({
     super.key,
     required this.nombre,
     required this.ubicacion,
+    this.titulo = 'Dónde atiende',
+    this.nota = notaCliente,
   });
 
   static Future<void> abrir(
     BuildContext context, {
     required String nombre,
     required Ubicacion ubicacion,
+    String titulo = 'Dónde atiende',
+    String nota = notaCliente,
   }) {
     return Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (_) =>
-            MapaZonaProfesional(nombre: nombre, ubicacion: ubicacion),
+        builder: (_) => MapaDeZona(
+          nombre: nombre,
+          ubicacion: ubicacion,
+          titulo: titulo,
+          nota: nota,
+        ),
       ),
     );
   }
 
   @override
-  State<MapaZonaProfesional> createState() => _MapaZonaProfesionalState();
+  State<MapaDeZona> createState() => _MapaDeZonaState();
 }
 
-class _MapaZonaProfesionalState extends State<MapaZonaProfesional> {
+class _MapaDeZonaState extends State<MapaDeZona> {
   final _mapa = MapController();
 
   @override
@@ -166,9 +184,9 @@ class _MapaZonaProfesionalState extends State<MapaZonaProfesional> {
         title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
-              'Dónde atiende',
-              style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold),
+            Text(
+              widget.titulo,
+              style: const TextStyle(fontSize: 17, fontWeight: FontWeight.bold),
             ),
             Text(
               'Zona de $sector',
@@ -226,7 +244,7 @@ class _MapaZonaProfesionalState extends State<MapaZonaProfesional> {
             bottom: margenInferior(context, base: 12),
             child: Column(
               children: [
-                const _Nota(),
+                _Nota(texto: widget.nota),
                 const SizedBox(height: 10),
                 SizedBox(
                   width: double.infinity,
@@ -300,7 +318,9 @@ class _Punto extends StatelessWidget {
 }
 
 class _Nota extends StatelessWidget {
-  const _Nota();
+  final String texto;
+
+  const _Nota({required this.texto});
 
   @override
   Widget build(BuildContext context) {
@@ -310,15 +330,21 @@ class _Nota extends StatelessWidget {
         color: TemaApp.blanco.withValues(alpha: 0.94),
         borderRadius: BorderRadius.circular(14),
       ),
-      child: const Row(
+      child: Row(
         children: [
-          Icon(Icons.privacy_tip_outlined, size: 16, color: TemaApp.grisTexto),
-          SizedBox(width: 9),
+          const Icon(
+            Icons.privacy_tip_outlined,
+            size: 16,
+            color: TemaApp.grisTexto,
+          ),
+          const SizedBox(width: 9),
           Expanded(
             child: Text(
-              'Se muestra la zona, no la dirección exacta. La recibes cuando '
-              'confirme tu cita.',
-              style: TextStyle(fontSize: 11.5, color: TemaApp.grisSubtitulo),
+              texto,
+              style: const TextStyle(
+                fontSize: 11.5,
+                color: TemaApp.grisSubtitulo,
+              ),
             ),
           ),
         ],
