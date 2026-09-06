@@ -61,10 +61,19 @@ class _ProfessionalAgendaScreenState extends State<ProfessionalAgendaScreen>
 
   late Stream<QuerySnapshot<Map<String, dynamic>>> _citas;
 
+  Ubicacion? _dondeAtiendo;
+
   @override
   void initState() {
     super.initState();
     crearConsultas();
+    _cargarMiUbicacion();
+  }
+
+  Future<void> _cargarMiUbicacion() async {
+    final datos = await _perfiles.datos(_uid);
+    if (!mounted) return;
+    setState(() => _dondeAtiendo = Ubicacion.desdeMapa(datos));
   }
 
   late Stream<Set<String>> _calificadas;
@@ -406,6 +415,7 @@ class _ProfessionalAgendaScreenState extends State<ProfessionalAgendaScreen>
       onChat: () => _abrirChat(cita),
       onResponderCambio: (aceptar) => _responderCambio(cita, aceptar),
       sinLeer: noLeidos[cita.id] ?? 0,
+      desde: _dondeAtiendo,
     );
   }
 
@@ -749,6 +759,7 @@ class _TarjetaSolicitud extends StatelessWidget {
   final VoidCallback onCalificar;
   final VoidCallback onReagendar;
   final ValueChanged<bool> onResponderCambio;
+  final Ubicacion? desde;
   final VoidCallback onChat;
   final int sinLeer;
 
@@ -760,6 +771,7 @@ class _TarjetaSolicitud extends StatelessWidget {
     required this.onCalificar,
     required this.onReagendar,
     required this.onResponderCambio,
+    this.desde,
     required this.onChat,
     required this.sinLeer,
   });
@@ -876,6 +888,7 @@ class _TarjetaSolicitud extends StatelessWidget {
                 cita: datos,
                 confirmada: estado == 'confirmed' || estado == 'completed',
                 finalizada: estado == 'completed' || estado == 'cancelled',
+                desde: desde,
               ),
             if (vencida) ...[
               const SizedBox(height: 12),

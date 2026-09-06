@@ -4,6 +4,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../data/models/ubicacion.dart';
 import '../../data/services/servicio_ubicacion_cita.dart';
 import '../../theme/app_theme.dart';
+import '../../utils/distancia.dart';
 import 'mensaje.dart';
 
 class BloqueDomicilio extends StatefulWidget {
@@ -11,6 +12,7 @@ class BloqueDomicilio extends StatefulWidget {
   final Map<String, dynamic> cita;
   final bool confirmada;
   final bool finalizada;
+  final Ubicacion? desde;
 
   const BloqueDomicilio({
     super.key,
@@ -18,6 +20,7 @@ class BloqueDomicilio extends StatefulWidget {
     required this.cita,
     required this.confirmada,
     this.finalizada = false,
+    this.desde,
   });
 
   @override
@@ -55,6 +58,27 @@ class _BloqueDomicilioState extends State<BloqueDomicilio> {
     });
   }
 
+  double? get _distancia {
+    final origen = widget.desde;
+    if (origen == null || !origen.tienePunto) return null;
+
+    final exacta = _exacta;
+    final latitud =
+        exacta?.latitud ??
+        (widget.cita['latitudZonaCliente'] as num?)?.toDouble();
+    final longitud =
+        exacta?.longitud ??
+        (widget.cita['longitudZonaCliente'] as num?)?.toDouble();
+    if (latitud == null || longitud == null) return null;
+
+    return distanciaKm(
+      latitudA: origen.latitud!,
+      longitudA: origen.longitud!,
+      latitudB: latitud,
+      longitudB: longitud,
+    );
+  }
+
   String get _sector {
     final barrio = (widget.cita['barrioCliente'] as String?)?.trim() ?? '';
     return barrio.isEmpty ? 'Villavicencio' : barrio;
@@ -84,6 +108,7 @@ class _BloqueDomicilioState extends State<BloqueDomicilio> {
   Widget build(BuildContext context) {
     final exacta = _exacta;
     final tieneExacta = widget.confirmada && (exacta?.estaDefinida ?? false);
+    final distancia = _distancia;
 
     return Padding(
       padding: const EdgeInsets.only(top: 10),
@@ -120,6 +145,26 @@ class _BloqueDomicilioState extends State<BloqueDomicilio> {
               tieneExacta ? exacta!.resumen : 'Zona de $_sector',
               style: const TextStyle(fontSize: 13, color: TemaApp.textoOscuro),
             ),
+            if (distancia != null) ...[
+              const SizedBox(height: 4),
+              Row(
+                children: [
+                  const Icon(
+                    Icons.near_me_outlined,
+                    size: 13,
+                    color: TemaApp.grisTexto,
+                  ),
+                  const SizedBox(width: 5),
+                  Text(
+                    'A ${formatearDistancia(distancia)} de donde atiendes',
+                    style: const TextStyle(
+                      fontSize: 12,
+                      color: TemaApp.grisSubtitulo,
+                    ),
+                  ),
+                ],
+              ),
+            ],
             if (!widget.confirmada) ...[
               const SizedBox(height: 6),
               const Row(
