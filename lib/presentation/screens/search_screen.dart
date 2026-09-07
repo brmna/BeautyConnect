@@ -389,43 +389,19 @@ class _SearchScreenState extends State<SearchScreen>
             setState(() => _enMapa = indice == 1);
           },
         ),
-        if (!_enMapa) ...[
-          _grupoFiltros(
-            'Mostrar',
-            FiltroModalidad.values.map(_chipModalidad).toList(),
-          ),
-          _grupoFiltros(
-            'Ordenar',
-            OrdenBusqueda.values.map(_chipOrden).toList(),
-          ),
-        ],
-      ],
-    );
-  }
-
-  Widget _grupoFiltros(String etiqueta, List<Widget> chips) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(14, 6, 14, 0),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          SizedBox(
-            width: 62,
-            child: Padding(
-              padding: const EdgeInsets.only(top: 7),
-              child: Text(
-                etiqueta,
-                style: const TextStyle(
-                  fontSize: 11,
-                  fontWeight: FontWeight.w600,
-                  color: TemaApp.grisTexto,
-                ),
-              ),
+        if (!_enMapa)
+          Padding(
+            padding: const EdgeInsets.fromLTRB(14, 6, 14, 0),
+            child: Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                ...FiltroModalidad.values.map(_chipModalidad),
+                ...OrdenBusqueda.values.map(_chipOrden),
+              ],
             ),
           ),
-          Expanded(child: Wrap(spacing: 8, runSpacing: 8, children: chips)),
-        ],
-      ),
+      ],
     );
   }
 
