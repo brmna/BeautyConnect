@@ -391,7 +391,7 @@ class _SearchScreenState extends State<SearchScreen>
         ),
         if (!_enMapa)
           Padding(
-            padding: const EdgeInsets.fromLTRB(14, 6, 14, 0),
+            padding: const EdgeInsets.only(top: 6),
             child: Wrap(
               spacing: 8,
               runSpacing: 8,
@@ -417,21 +417,20 @@ class _SearchScreenState extends State<SearchScreen>
       },
       avatar: Icon(
         filtro.icono,
-        size: 15,
+        size: 16,
         color: activo ? TemaApp.blanco : TemaApp.grisSubtitulo,
       ),
       label: Text(filtro.etiqueta),
       labelStyle: TextStyle(
-        fontSize: 12,
+        fontSize: 12.5,
         color: activo ? TemaApp.blanco : TemaApp.textoOscuro,
         fontWeight: activo ? FontWeight.w600 : FontWeight.normal,
       ),
       selectedColor: TemaApp.negro,
       backgroundColor: TemaApp.blanco,
       side: BorderSide.none,
-      visualDensity: VisualDensity.compact,
       materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
     );
   }
 
@@ -445,27 +444,26 @@ class _SearchScreenState extends State<SearchScreen>
       onSelected: (_) => _cambiarOrden(orden),
       avatar: cargando
           ? const SizedBox(
-              width: 14,
-              height: 14,
+              width: 16,
+              height: 16,
               child: CircularProgressIndicator(strokeWidth: 2),
             )
           : Icon(
               orden.icono,
-              size: 15,
+              size: 16,
               color: activo ? TemaApp.blanco : TemaApp.grisSubtitulo,
             ),
       label: Text(orden.etiqueta),
       labelStyle: TextStyle(
-        fontSize: 12,
+        fontSize: 12.5,
         color: activo ? TemaApp.blanco : TemaApp.textoOscuro,
         fontWeight: activo ? FontWeight.w600 : FontWeight.normal,
       ),
       selectedColor: TemaApp.negro,
       backgroundColor: TemaApp.blanco,
       side: BorderSide.none,
-      visualDensity: VisualDensity.compact,
       materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
     );
   }
 

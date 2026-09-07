@@ -47,7 +47,7 @@ class AplicacionBeautyConnect extends StatelessWidget {
       builder: (context, child) => GestureDetector(
         behavior: HitTestBehavior.translucent,
         onTap: () => FocusManager.instance.primaryFocus?.unfocus(),
-        child: child ?? const SizedBox.shrink(),
+        child: _MarcoResponsivo(child: child),
       ),
       home: const EscuchaEnlaces(child: AuthWrapper()),
     );
@@ -55,3 +55,37 @@ class AplicacionBeautyConnect extends StatelessWidget {
 }
 
 final navegadorGlobal = GlobalKey<NavigatorState>();
+
+/// La app está diseñada para ancho de celular. En una pantalla más ancha
+/// (tablet) se ve como una app de celular centrada, en vez de estirada.
+class _MarcoResponsivo extends StatelessWidget {
+  static const double anchoMaximo = 480;
+
+  final Widget? child;
+
+  const _MarcoResponsivo({required this.child});
+
+  @override
+  Widget build(BuildContext context) {
+    final contenido = child ?? const SizedBox.shrink();
+    final medidas = MediaQuery.of(context);
+
+    if (medidas.size.width <= anchoMaximo) return contenido;
+
+    return ColoredBox(
+      color: TemaApp.negro,
+      child: Center(
+        child: SizedBox(
+          width: anchoMaximo,
+          height: medidas.size.height,
+          child: MediaQuery(
+            data: medidas.copyWith(
+              size: Size(anchoMaximo, medidas.size.height),
+            ),
+            child: contenido,
+          ),
+        ),
+      ),
+    );
+  }
+}
