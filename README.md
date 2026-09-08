@@ -62,28 +62,6 @@ Además de Firebase, la app usa dos servicios opcionales que se activan por vari
 
 El mapa de ubicación y cobertura usa `flutter_map` sobre OpenStreetMap, no requiere clave.
 
-## Configuración de Firebase
-
-### Autenticación
-
-1. En [Firebase Console](https://console.firebase.google.com), entra a Authentication → Sign-in method.
-2. Habilita Email/Password.
-3. Si vas a usar el inicio de sesión con Google, habilita también el proveedor de Google y registra el SHA-1 de tu keystore en la configuración de la app Android.
-
-### Firestore
-
-Crea la base de datos en modo de producción y en la región que prefieras. Las reglas de seguridad ya están en [`firestore.rules`](firestore.rules) en la raíz del proyecto; despliégalas con `firebase deploy --only firestore:rules` o pégalas manualmente en Firestore → Reglas.
-
-Algunas consultas necesitan índices compuestos. Firebase los pide automáticamente la primera vez que se ejecuta una consulta nueva: el error en el log de debug trae un enlace que crea el índice directo en la consola. Los que se usan desde el inicio son:
-
-| Colección | Campos |
-|---|---|
-| `bookings` | `professionalId` asc, `date` asc |
-| `bookings` | `professionalId` asc, `status` asc |
-| `bookings` | `clientId` asc, `createdAt` desc |
-| `users/*/services` | `createdAt` asc |
-| `users/*/portfolio` | `createdAt` desc |
-
 ## Cómo ejecutar
 
 Ni las credenciales de Firebase ni las de Gemini/Cloudinary están en el repositorio; cada persona que clona el proyecto configura las suyas.
@@ -102,8 +80,27 @@ firebase login
 flutterfire configure --project=tu-project-id --platforms=android
 ```
 
-5. Despliega las reglas ya incluidas en el repo: `firebase deploy --only firestore:rules`.
-6. Para que el login con Google funcione en tu propio equipo, agrega el SHA-1 de tu keystore de debug en Firebase Console → configuración del proyecto → tu app Android → Agregar huella digital. Lo obtienes con:
+5. `flutterfire configure` genera un `firebase.json` nuevo (local, excluido de git) que solo trae la config de FlutterFire. Agrégale esta sección para poder desplegar reglas e índices:
+
+```json
+{
+  "firestore": {
+    "rules": "firestore.rules",
+    "indexes": "firestore.indexes.json"
+  },
+  "flutter": { ... }
+}
+```
+
+6. Despliega juntas las reglas y los índices ya incluidos en el repo:
+
+```bash
+firebase deploy --only firestore:rules,firestore:indexes
+```
+
+Sin esto, cosas como la galería de inicio o las reseñas van a fallar con un error de "requiere un índice" — Firestore no crea automático los índices que necesitan las consultas entre subcolecciones (`collectionGroup`), y cada proyecto de Firebase es independiente.
+
+7. Para que el login con Google funcione en tu propio equipo, agrega el SHA-1 de tu keystore de debug en Firebase Console → configuración del proyecto → tu app Android → Agregar huella digital. Lo obtienes con:
 
 ```bash
 keytool -list -v -keystore %USERPROFILE%\.android\debug.keystore -alias androiddebugkey -storepass android -keypass android
