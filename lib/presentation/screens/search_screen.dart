@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
@@ -89,6 +91,8 @@ class _SearchScreenState extends State<SearchScreen>
   Position? _miUbicacion;
   bool _buscandoUbicacion = false;
   int _peticionUbicacion = 0;
+
+  static const Duration _esperaUbicacion = Duration(seconds: 15);
 
   @override
   bool get anclarCabecera => _busqueda.isNotEmpty || _enMapa;
@@ -291,44 +295,62 @@ class _SearchScreenState extends State<SearchScreen>
     setState(() => _buscandoUbicacion = true);
     final mensajero = ScaffoldMessenger.of(context);
 
+    void avisar(String texto, TipoAviso tipo) {
+      if (peticion != _peticionUbicacion) return;
+      mensajero.showSnackBar(construirMensaje(texto, tipo: tipo));
+    }
+
     try {
+      if (!await Geolocator.isLocationServiceEnabled()) {
+        avisar(
+          'Activa la ubicación del teléfono para ordenar por cercanía',
+          TipoAviso.aviso,
+        );
+        return;
+      }
+
       var permiso = await Geolocator.checkPermission();
       if (permiso == LocationPermission.denied) {
         permiso = await Geolocator.requestPermission();
       }
 
-      if (permiso == LocationPermission.denied ||
-          permiso == LocationPermission.deniedForever) {
-        if (peticion == _peticionUbicacion) {
-          mensajero.showSnackBar(
-            construirMensaje(
-              'Necesitamos tu ubicación para ordenar por cercanía',
-              tipo: TipoAviso.aviso,
-            ),
-          );
-        }
-      } else {
-        final posicion = await Geolocator.getCurrentPosition(
-          locationSettings: const LocationSettings(
-            accuracy: LocationAccuracy.medium,
-          ),
+      if (permiso == LocationPermission.deniedForever) {
+        avisar(
+          'Diste permiso de ubicación como denegado. Cámbialo en los ajustes '
+          'del teléfono',
+          TipoAviso.aviso,
         );
-        if (mounted && peticion == _peticionUbicacion) {
-          setState(() {
-            _miUbicacion = posicion;
-            _orden = OrdenBusqueda.distancia;
-          });
-        }
+        return;
       }
-    } catch (_) {
-      if (peticion == _peticionUbicacion) {
-        mensajero.showSnackBar(
-          construirMensaje(
-            'No se pudo obtener tu ubicación',
-            tipo: TipoAviso.error,
-          ),
+
+      if (permiso == LocationPermission.denied) {
+        avisar(
+          'Necesitamos tu ubicación para ordenar por cercanía',
+          TipoAviso.aviso,
         );
+        return;
       }
+
+      final posicion = await Geolocator.getCurrentPosition(
+        locationSettings: const LocationSettings(
+          accuracy: LocationAccuracy.medium,
+          timeLimit: _esperaUbicacion,
+        ),
+      );
+
+      if (mounted && peticion == _peticionUbicacion) {
+        setState(() {
+          _miUbicacion = posicion;
+          _orden = OrdenBusqueda.distancia;
+        });
+      }
+    } on TimeoutException {
+      avisar(
+        'No pudimos ubicarte. Prueba al aire libre o con el GPS encendido',
+        TipoAviso.error,
+      );
+    } catch (e) {
+      avisar('No se pudo obtener tu ubicación: $e', TipoAviso.error);
     }
 
     if (mounted && peticion == _peticionUbicacion) {
