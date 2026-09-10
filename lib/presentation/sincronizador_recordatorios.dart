@@ -37,8 +37,14 @@ class _SincronizadorRecordatoriosState
   @override
   void initState() {
     super.initState();
-    ServicioNotificaciones.instancia.pedirPermiso();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _pedirPermiso());
     _escuchar();
+  }
+
+  Future<void> _pedirPermiso() async {
+    try {
+      await ServicioNotificaciones.instancia.pedirPermiso();
+    } catch (_) {}
   }
 
   @override

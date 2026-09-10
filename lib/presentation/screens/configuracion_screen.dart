@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:geolocator/geolocator.dart';
 
 import '../../data/models/ajustes_profesional.dart';
 import '../../theme/app_theme.dart';
@@ -680,11 +681,41 @@ class _FilaNotificacionesState extends State<_FilaNotificaciones> {
 
   bool? _permitidas;
   bool _exactas = true;
+  bool _pidiendo = false;
 
   @override
   void initState() {
     super.initState();
     _revisar();
+  }
+
+  Future<void> _activar() async {
+    setState(() => _pidiendo = true);
+    final mensajero = ScaffoldMessenger.of(context);
+
+    var concedido = false;
+    try {
+      concedido = await _avisos.pedirPermiso();
+    } catch (_) {}
+
+    await _revisar();
+    if (!mounted) return;
+    setState(() => _pidiendo = false);
+
+    if (concedido) {
+      mensajero.showSnackBar(
+        construirMensaje('Notificaciones activadas', tipo: TipoAviso.exito),
+      );
+      return;
+    }
+
+    mensajero.showSnackBar(
+      construirMensaje(
+        'Android no dejó activarlas desde aquí. Te llevamos a los ajustes',
+        tipo: TipoAviso.aviso,
+      ),
+    );
+    await Geolocator.openAppSettings();
   }
 
   Future<void> _revisar() async {
@@ -709,12 +740,33 @@ class _FilaNotificacionesState extends State<_FilaNotificaciones> {
           icono: Icons.notifications_active_outlined,
           titulo: 'Recordatorios de citas',
           detalle: permitidas == false
-              ? 'Están desactivadas para BeautyConnect. Actívalas en los '
-                    'ajustes de notificaciones de tu teléfono.'
+              ? 'Están desactivadas, así que no te llegará ningún aviso '
+                    'antes de tus citas.'
               : 'Te avisamos 24 horas y 2 horas antes de cada cita '
                     'confirmada. Para apagarlos, usa los ajustes de tu '
                     'teléfono.',
         ),
+        if (permitidas == false)
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+            child: SizedBox(
+              width: double.infinity,
+              child: FilledButton.icon(
+                onPressed: _pidiendo ? null : _activar,
+                icon: _pidiendo
+                    ? const SizedBox(
+                        width: 15,
+                        height: 15,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: TemaApp.blanco,
+                        ),
+                      )
+                    : const Icon(Icons.notifications_active_outlined, size: 17),
+                label: const Text('Activar notificaciones'),
+              ),
+            ),
+          ),
         if (permitidas == true && !_exactas)
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
