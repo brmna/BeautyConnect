@@ -3,6 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
 
+import '../widgets/etiqueta_chip.dart';
 import '../widgets/estado_vacio.dart';
 import '../../data/services/servicio_vision.dart';
 import '../../utils/similitud.dart';
@@ -328,13 +329,15 @@ class _ClientHomeState extends State<ClientHome>
           return Padding(
             padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 5),
             child: ChoiceChip(
-              label: Text(etiqueta ?? 'Todos'),
+              label: EtiquetaChip(
+                texto: etiqueta ?? 'Todos',
+                activo: activa,
+                tamano: 12,
+              ),
               selected: activa,
               showCheckmark: false,
               labelStyle: TextStyle(
-                fontSize: 12,
                 color: activa ? TemaApp.blanco : TemaApp.textoOscuro,
-                fontWeight: activa ? FontWeight.w600 : FontWeight.normal,
               ),
               selectedColor: TemaApp.negro,
               backgroundColor: TemaApp.blanco,

@@ -17,6 +17,7 @@ class MiTrabajoScreen extends StatefulWidget {
 
 class _MiTrabajoScreenState extends State<MiTrabajoScreen> {
   late int _pestana = widget.pestanaInicial;
+  late final PageController _paginas = PageController(initialPage: _pestana);
 
   static const _subtitulos = [
     'Lo que ofreces y a qué precio',
@@ -28,11 +29,28 @@ class _MiTrabajoScreenState extends State<MiTrabajoScreen> {
   void didUpdateWidget(MiTrabajoScreen anterior) {
     super.didUpdateWidget(anterior);
     if (widget.pestanaInicial != anterior.pestanaInicial) {
-      setState(() => _pestana = widget.pestanaInicial);
+      irA(widget.pestanaInicial);
     }
   }
 
-  void irA(int pestana) => setState(() => _pestana = pestana);
+  @override
+  void dispose() {
+    _paginas.dispose();
+    super.dispose();
+  }
+
+  void irA(int pestana) {
+    if (!_paginas.hasClients) {
+      setState(() => _pestana = pestana);
+      return;
+    }
+
+    _paginas.animateToPage(
+      pestana,
+      duration: const Duration(milliseconds: 260),
+      curve: Curves.easeOut,
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -52,8 +70,9 @@ class _MiTrabajoScreenState extends State<MiTrabajoScreen> {
             onCambio: irA,
           ),
           Expanded(
-            child: IndexedStack(
-              index: _pestana,
+            child: PageView(
+              controller: _paginas,
+              onPageChanged: (pagina) => setState(() => _pestana = pagina),
               children: const [
                 ProfessionalServicesScreen(embebida: true),
                 ProfessionalPortfolioScreen(embebida: true),

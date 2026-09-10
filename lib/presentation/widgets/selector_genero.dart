@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import 'etiqueta_chip.dart';
 import '../../theme/app_theme.dart';
 import '../../utils/genero.dart';
 
@@ -35,14 +36,15 @@ class SelectorGenero extends StatelessWidget {
             final activo = genero == valor;
 
             return ChoiceChip(
-              label: Text(etiquetaGenero(genero)),
+              label: EtiquetaChip(
+                texto: etiquetaGenero(genero),
+                activo: activo,
+              ),
               selected: activo,
               showCheckmark: false,
               onSelected: (_) => onCambio(genero),
               labelStyle: TextStyle(
-                fontSize: 12.5,
                 color: activo ? TemaApp.blanco : TemaApp.textoOscuro,
-                fontWeight: activo ? FontWeight.w600 : FontWeight.normal,
               ),
               selectedColor: TemaApp.negro,
               backgroundColor: TemaApp.blanco,

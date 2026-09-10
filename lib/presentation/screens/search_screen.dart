@@ -4,6 +4,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 
+import '../widgets/etiqueta_chip.dart';
 import '../widgets/estado_vacio.dart';
 import '../widgets/corazon_animado.dart';
 import '../../data/services/servicio_favoritos.dart';
@@ -13,8 +14,10 @@ import '../../data/services/servicio_subida_imagenes.dart';
 import '../../theme/app_theme.dart';
 import '../../utils/distancia.dart';
 import '../../utils/formato.dart';
+import '../../utils/margenes.dart';
 import '../widgets/barra_ocultable.dart';
 import '../widgets/cabecera_pantalla.dart';
+import '../widgets/hoja_modal.dart';
 import '../widgets/mensaje.dart';
 import '../widgets/recarga_manual.dart';
 import '../widgets/mapa_zonas.dart';
@@ -29,7 +32,7 @@ extension _EtiquetaModalidad on FiltroModalidad {
   String get etiqueta => switch (this) {
     FiltroModalidad.todas => 'Todas',
     FiltroModalidad.domicilio => 'Domicilio',
-    FiltroModalidad.local => 'En su local',
+    FiltroModalidad.local => 'En local',
   };
 
   IconData get icono => switch (this) {
@@ -413,13 +416,28 @@ class _SearchScreenState extends State<SearchScreen>
         ),
         if (!_enMapa)
           Padding(
-            padding: const EdgeInsets.only(top: 6),
-            child: Wrap(
-              spacing: 8,
-              runSpacing: 8,
+            padding: const EdgeInsets.fromLTRB(14, 6, 14, 0),
+            child: Row(
               children: [
-                ...FiltroModalidad.values.map(_chipModalidad),
-                ...OrdenBusqueda.values.map(_chipOrden),
+                Expanded(
+                  child: FittedBox(
+                    fit: BoxFit.scaleDown,
+                    alignment: Alignment.centerLeft,
+                    child: Row(
+                      children: [
+                        _chipModalidad(FiltroModalidad.values.first),
+                        for (final filtro in FiltroModalidad.values.skip(
+                          1,
+                        )) ...[
+                          const SizedBox(width: 8),
+                          _chipModalidad(filtro),
+                        ],
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                _botonOrden(),
               ],
             ),
           ),
@@ -442,11 +460,9 @@ class _SearchScreenState extends State<SearchScreen>
         size: 16,
         color: activo ? TemaApp.blanco : TemaApp.grisSubtitulo,
       ),
-      label: Text(filtro.etiqueta),
+      label: EtiquetaChip(texto: filtro.etiqueta, activo: activo),
       labelStyle: TextStyle(
-        fontSize: 12.5,
         color: activo ? TemaApp.blanco : TemaApp.textoOscuro,
-        fontWeight: activo ? FontWeight.w600 : FontWeight.normal,
       ),
       selectedColor: TemaApp.negro,
       backgroundColor: TemaApp.blanco,
@@ -456,37 +472,79 @@ class _SearchScreenState extends State<SearchScreen>
     );
   }
 
-  Widget _chipOrden(OrdenBusqueda orden) {
-    final activo = orden == _orden;
-    final cargando = _buscandoUbicacion && orden == OrdenBusqueda.distancia;
+  Widget _botonOrden() {
+    final ordenando = _orden != OrdenBusqueda.relevancia;
 
-    return ChoiceChip(
-      selected: activo,
-      showCheckmark: false,
-      onSelected: (_) => _cambiarOrden(orden),
-      avatar: cargando
-          ? const SizedBox(
-              width: 16,
-              height: 16,
-              child: CircularProgressIndicator(strokeWidth: 2),
-            )
-          : Icon(
-              orden.icono,
-              size: 16,
-              color: activo ? TemaApp.blanco : TemaApp.grisSubtitulo,
+    return Tooltip(
+      message: 'Ordenar: ${_orden.etiqueta}',
+      child: Material(
+        color: ordenando ? TemaApp.negro : TemaApp.blanco,
+        borderRadius: BorderRadius.circular(8),
+        child: InkWell(
+          onTap: _elegirOrden,
+          borderRadius: BorderRadius.circular(8),
+          child: SizedBox(
+            width: 34,
+            height: 34,
+            child: Center(
+              child: _buscandoUbicacion
+                  ? const SizedBox(
+                      width: 15,
+                      height: 15,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : Icon(
+                      _orden.icono,
+                      size: 18,
+                      color: ordenando ? TemaApp.blanco : TemaApp.textoOscuro,
+                    ),
             ),
-      label: Text(orden.etiqueta),
-      labelStyle: TextStyle(
-        fontSize: 12.5,
-        color: activo ? TemaApp.blanco : TemaApp.textoOscuro,
-        fontWeight: activo ? FontWeight.w600 : FontWeight.normal,
+          ),
+        ),
       ),
-      selectedColor: TemaApp.negro,
-      backgroundColor: TemaApp.blanco,
-      side: BorderSide.none,
-      materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
     );
+  }
+
+  Future<void> _elegirOrden() async {
+    final elegido = await abrirHoja<OrdenBusqueda>(
+      context,
+      hijo: Padding(
+        padding: EdgeInsets.only(
+          left: 8,
+          right: 8,
+          top: 4,
+          bottom: margenHoja(context, base: 12),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Padding(
+              padding: EdgeInsets.fromLTRB(12, 0, 12, 8),
+              child: Text(
+                'Ordenar por',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              ),
+            ),
+            ...OrdenBusqueda.values.map(
+              (orden) => ListTile(
+                onTap: () => Navigator.pop(context, orden),
+                leading: Icon(orden.icono, size: 20),
+                title: Text(
+                  orden.etiqueta,
+                  style: const TextStyle(fontSize: 14),
+                ),
+                trailing: orden == _orden
+                    ? const Icon(Icons.check, size: 20, color: TemaApp.negro)
+                    : null,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+
+    if (elegido != null) await _cambiarOrden(elegido);
   }
 
   Widget _cabecera() {
