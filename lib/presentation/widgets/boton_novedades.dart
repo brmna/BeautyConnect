@@ -208,9 +208,17 @@ class _Fila extends StatelessWidget {
         icono: Icons.edit_calendar_outlined,
         color: TemaApp.aviso,
       ),
+      TipoNovedad.cambioRechazado => (
+        icono: Icons.event_repeat_outlined,
+        color: TemaApp.grisTexto,
+      ),
       TipoNovedad.confirmada => (
         icono: Icons.check_circle_outline,
         color: TemaApp.exito,
+      ),
+      TipoNovedad.completada => (
+        icono: Icons.star_border,
+        color: TemaApp.aviso,
       ),
       TipoNovedad.movida => (
         icono: Icons.edit_calendar_outlined,

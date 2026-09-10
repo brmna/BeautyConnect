@@ -149,6 +149,60 @@ void main() {
       expect(texto.cuerpo, contains('Me surgió un imprevisto'));
       expect(texto.detalle, contains('Motivo: Me surgió un imprevisto'));
     });
+    test('un rechazo de cambio dice que la cita sigue igual', () {
+      final texto = aviso(
+        citaBase(
+          estado: 'confirmed',
+          extra: {
+            'respondidoEn': Timestamp.fromDate(
+              _ahora.subtract(const Duration(hours: 3)),
+            ),
+            'cambioRechazadoEn': Timestamp.fromDate(_ahora),
+          },
+        ),
+        esProfesional: false,
+        nombre: 'Laura',
+      );
+
+      expect(texto.titulo, 'Laura no pudo mover tu cita');
+      expect(texto.cuerpo, 'Uñas acrílicas · sigue mañana a las 3:30 PM');
+      expect(texto.detalle, contains('Sigue mañana a las 3:30 PM'));
+    });
+
+    test('al terminar la cita se invita a dejar reseña', () {
+      final texto = aviso(
+        citaBase(
+          estado: 'completed',
+          extra: {'completadaEn': Timestamp.fromDate(_ahora)},
+        ),
+        esProfesional: false,
+        nombre: 'Laura',
+      );
+
+      expect(texto.titulo, 'Laura dio tu cita por atendida');
+      expect(texto.cuerpo, contains('¿cómo te fue?'));
+      expect(texto.detalle, contains('Deja tu reseña'));
+    });
+  });
+
+  group('mensajes del chat', () {
+    test('el aviso lleva quién escribe, el texto y sobre qué cita', () {
+      final texto = avisoDeMensaje(const {
+        'ultimoMensaje': '¿Puedo llegar 10 minutos tarde?',
+        'servicio': 'Uñas acrílicas',
+      }, nombre: 'Daniela');
+
+      expect(texto.titulo, 'Mensaje de Daniela');
+      expect(texto.cuerpo, '¿Puedo llegar 10 minutos tarde?');
+      expect(texto.detalle, contains('Sobre: Uñas acrílicas'));
+    });
+
+    test('sin nombre sigue diciendo que hay un mensaje', () {
+      final texto = avisoDeMensaje(const {'ultimoMensaje': 'Hola'});
+
+      expect(texto.titulo, 'Mensaje nuevo');
+      expect(texto.cuerpo, 'Hola');
+    });
   });
 
   group('recordatorios', () {

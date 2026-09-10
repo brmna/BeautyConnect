@@ -14,7 +14,7 @@ import '../../utils/formato.dart';
 import '../../utils/franjas_cita.dart';
 import '../../data/services/servicio_resenas_clientes.dart';
 import '../widgets/avatar_persona.dart';
-import '../widgets/bloque_domicilio.dart';
+import '../widgets/bloque_lugar.dart';
 import '../widgets/boton_novedades.dart';
 import '../widgets/cabecera_pantalla.dart';
 import '../widgets/confirmacion.dart';
@@ -680,6 +680,10 @@ class _ProfessionalAgendaScreenState extends State<ProfessionalAgendaScreen>
       if (nuevoEstado == 'cancelled') ...{
         'canceladaPor': 'profesional',
         if (motivo != null && motivo.isNotEmpty) 'motivoCancelacion': motivo,
+      },
+      if (nuevoEstado == 'completed') ...{
+        'completadaEn': FieldValue.serverTimestamp(),
+        'avisoVisto': false,
       },
       if (respuestaAlCliente) ...{
         'respondidoEn': FieldValue.serverTimestamp(),

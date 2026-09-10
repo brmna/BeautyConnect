@@ -551,12 +551,15 @@ class ServicioDisponibilidad {
 
     return _db.collection('bookings').doc(citaId).update({
       CambioSolicitado.clave: propuesta.aMapa(),
+      'cambioRechazadoEn': FieldValue.delete(),
     });
   }
 
   Future<void> descartarCambio(String citaId) {
     return _db.collection('bookings').doc(citaId).update({
       CambioSolicitado.clave: FieldValue.delete(),
+      'cambioRechazadoEn': FieldValue.serverTimestamp(),
+      'avisoVisto': false,
     });
   }
 

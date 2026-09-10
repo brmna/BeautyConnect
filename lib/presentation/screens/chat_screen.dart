@@ -9,6 +9,7 @@ import '../../theme/app_theme.dart';
 import '../../utils/formato.dart';
 import '../../utils/margenes.dart';
 import '../widgets/mensaje.dart';
+import '../../data/services/servicio_notificaciones.dart';
 
 class ChatScreen extends StatefulWidget {
   final String citaId;
@@ -54,6 +55,7 @@ class _ChatScreenState extends State<ChatScreen> {
   @override
   void initState() {
     super.initState();
+    ServicioNotificaciones.instancia.chatAbierto = widget.citaId;
     _prepararChat();
   }
 
@@ -82,6 +84,9 @@ class _ChatScreenState extends State<ChatScreen> {
 
   @override
   void dispose() {
+    if (ServicioNotificaciones.instancia.chatAbierto == widget.citaId) {
+      ServicioNotificaciones.instancia.chatAbierto = null;
+    }
     _texto.dispose();
     super.dispose();
   }

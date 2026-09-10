@@ -21,6 +21,7 @@ import '../widgets/hoja_calificar.dart';
 import '../widgets/hoja_reagendar.dart';
 import 'bandeja_chats_screen.dart';
 import 'chat_screen.dart';
+import '../widgets/bloque_lugar.dart';
 import '../widgets/datos_cita.dart';
 import '../widgets/mensaje.dart';
 import '../widgets/recarga_manual.dart';
@@ -503,9 +504,12 @@ class _TarjetaCita extends StatelessWidget {
                   ),
                 )
               else
-                _Direccion(
-                  direccion: datos['direccionProfesional'] as String?,
-                  visible: estado == 'confirmed',
+                BloqueLocal(
+                  profesionalId: profesionalId,
+                  cita: datos,
+                  perfiles: perfiles,
+                  confirmada: estado == 'confirmed' || estado == 'completed',
+                  finalizada: estado == 'completed' || estado == 'cancelled',
                 ),
               if (calificable && !yaCalificada) ...[
                 const SizedBox(height: 12),
@@ -827,40 +831,6 @@ class _Manicurista extends StatelessWidget {
           ),
         ),
       ],
-    );
-  }
-}
-
-class _Direccion extends StatelessWidget {
-  final String? direccion;
-  final bool visible;
-
-  const _Direccion({required this.direccion, required this.visible});
-
-  @override
-  Widget build(BuildContext context) {
-    final texto = direccion?.trim() ?? '';
-    if (!visible || texto.isEmpty) return const SizedBox.shrink();
-
-    return Padding(
-      padding: const EdgeInsets.only(top: 8),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Icon(
-            Icons.location_on_outlined,
-            size: 15,
-            color: TemaApp.exito,
-          ),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Text(
-              texto,
-              style: const TextStyle(fontSize: 12.5, color: TemaApp.exito),
-            ),
-          ),
-        ],
-      ),
     );
   }
 }

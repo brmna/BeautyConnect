@@ -28,7 +28,10 @@ class ServicioNotificaciones {
 
   static const String _idCanal = 'recordatorios_citas';
   static const String _idCanalAvisos = 'avisos_citas';
+  static const String _idCanalMensajes = 'mensajes_chat';
   static const List<int> _horasAntes = [24, 2];
+
+  String? chatAbierto;
 
   final FlutterLocalNotificationsPlugin _plugin =
       FlutterLocalNotificationsPlugin();
@@ -71,6 +74,15 @@ class ServicioNotificaciones {
         _idCanalAvisos,
         'Movimientos de tus citas',
         description: 'Solicitudes nuevas, confirmaciones y cancelaciones',
+        importance: Importance.high,
+      ),
+    );
+
+    await _android?.createNotificationChannel(
+      const AndroidNotificationChannel(
+        _idCanalMensajes,
+        'Mensajes',
+        description: 'Mensajes nuevos en el chat de una cita',
         importance: Importance.high,
       ),
     );
@@ -158,7 +170,7 @@ class ServicioNotificaciones {
     return lineas.join(';');
   }
 
-  Future<void> avisarAhora(TextoAviso texto) async {
+  Future<void> avisarAhora(TextoAviso texto, {bool esMensaje = false}) async {
     if (!_iniciado) await iniciar();
     if (!await hayPermiso()) return;
 
@@ -170,12 +182,19 @@ class ServicioNotificaciones {
       _siguienteAviso,
       texto.titulo,
       texto.cuerpo,
-      _detalles(
-        canal: _idCanalAvisos,
-        nombre: 'Movimientos de tus citas',
-        descripcion: 'Solicitudes nuevas, confirmaciones y cancelaciones',
-        texto: texto,
-      ),
+      esMensaje
+          ? _detalles(
+              canal: _idCanalMensajes,
+              nombre: 'Mensajes',
+              descripcion: 'Mensajes nuevos en el chat de una cita',
+              texto: texto,
+            )
+          : _detalles(
+              canal: _idCanalAvisos,
+              nombre: 'Movimientos de tus citas',
+              descripcion: 'Solicitudes nuevas, confirmaciones y cancelaciones',
+              texto: texto,
+            ),
     );
   }
 

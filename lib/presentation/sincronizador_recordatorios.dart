@@ -32,8 +32,11 @@ class SincronizadorRecordatorios extends StatefulWidget {
 class _SincronizadorRecordatoriosState
     extends State<SincronizadorRecordatorios> {
   StreamSubscription<QuerySnapshot>? _suscripcion;
+  StreamSubscription<QuerySnapshot>? _suscripcionChats;
 
   final _firmaPrevia = <String, String>{};
+  final _firmaChat = <String, String>{};
+  bool _primerosChats = true;
   final _caducando = <String>{};
   final _perfiles = CachePerfiles();
   bool _primeraCarga = true;
@@ -43,6 +46,7 @@ class _SincronizadorRecordatoriosState
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) => _pedirPermiso());
     _escuchar();
+    _escucharChats();
   }
 
   Future<void> _pedirPermiso() async {
@@ -54,6 +58,7 @@ class _SincronizadorRecordatoriosState
   @override
   void dispose() {
     _suscripcion?.cancel();
+    _suscripcionChats?.cancel();
     super.dispose();
   }
 
@@ -69,6 +74,54 @@ class _SincronizadorRecordatoriosState
           await _avisarDeLosCambios(consulta.docs);
           await _programarRecordatorios(consulta.docs);
         }, onError: (_) {});
+  }
+
+  void _escucharChats() {
+    if (widget.uid.isEmpty) return;
+
+    _suscripcionChats = FirebaseFirestore.instance
+        .collection('chats')
+        .where('participantes', arrayContains: widget.uid)
+        .snapshots()
+        .listen((consulta) async {
+          await _avisarDeLosMensajes(consulta.docs);
+        }, onError: (_) {});
+  }
+
+  Future<void> _avisarDeLosMensajes(
+    List<QueryDocumentSnapshot> documentos,
+  ) async {
+    final nuevos = <Map<String, dynamic>>[];
+
+    for (final documento in documentos) {
+      final datos = documento.data() as Map<String, dynamic>;
+      final momento = (datos['ultimoEn'] as Timestamp?)?.toDate();
+      final firma = momento?.toIso8601String() ?? '';
+
+      final anterior = _firmaChat[documento.id];
+      _firmaChat[documento.id] = firma;
+
+      if (_primerosChats || firma.isEmpty || anterior == firma) continue;
+      if (datos['ultimoAutorId'] == widget.uid) continue;
+      if (datos['ultimoEsAviso'] == true) continue;
+      if (ServicioNotificaciones.instancia.chatAbierto == documento.id) {
+        continue;
+      }
+
+      nuevos.add(datos);
+    }
+
+    _primerosChats = false;
+
+    for (final chat in nuevos.take(3)) {
+      await ServicioNotificaciones.instancia.avisarAhora(
+        avisoDeMensaje(
+          chat,
+          nombre: await _nombre(chat['ultimoAutorId'] as String? ?? ''),
+        ),
+        esMensaje: true,
+      );
+    }
   }
 
   void _caducarAbandonadas(List<QueryDocumentSnapshot> documentos) {

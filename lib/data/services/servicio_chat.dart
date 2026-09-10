@@ -195,6 +195,7 @@ class ServicioChat {
       'ultimoMensaje': limpio,
       'ultimoEn': FieldValue.serverTimestamp(),
       'ultimoAutorId': autorId,
+      'ultimoEsAviso': esAviso,
       campoDelOtro: FieldValue.increment(1),
     }, SetOptions(merge: true));
 

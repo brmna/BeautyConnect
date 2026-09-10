@@ -6,8 +6,10 @@ enum TipoNovedad {
   solicitudNueva,
   citaNueva,
   cambioPedido,
+  cambioRechazado,
   confirmada,
   movida,
+  completada,
   cancelada,
   vencida,
 }
@@ -72,7 +74,6 @@ Novedad? novedadDeCita(
   if (cita == null) return null;
 
   final estado = (cita['status'] as String?) ?? 'pending';
-  if (estado == 'completed') return null;
 
   final personaId =
       (esProfesional
@@ -104,6 +105,19 @@ Novedad? novedadDeCita(
   final creada = _sello(cita, 'createdAt');
   final respondida = _sello(cita, 'respondidoEn');
   final movida = _sello(cita, 'reagendadaEn');
+  final rechazado = _sello(cita, 'cambioRechazadoEn');
+
+  if (estado == 'completed') {
+    if (esProfesional) return null;
+
+    return armar(
+      tipo: TipoNovedad.completada,
+      titulo: 'Tu cita terminó',
+      plantilla: '{nombre} dio tu cita por atendida',
+      detalle: '${_servicio(cita)} · cuéntale cómo te fue',
+      momento: _sello(cita, 'completadaEn'),
+    );
+  }
 
   if (estado == 'cancelled') {
     final quien = cita['canceladaPor'] as String?;
@@ -176,6 +190,18 @@ Novedad? novedadDeCita(
   }
 
   if (estado != 'confirmed') return null;
+
+  if (rechazado != null &&
+      (movida == null || rechazado.isAfter(movida)) &&
+      (respondida == null || rechazado.isAfter(respondida))) {
+    return armar(
+      tipo: TipoNovedad.cambioRechazado,
+      titulo: 'No pudieron mover tu cita',
+      plantilla: '{nombre} no pudo mover tu cita',
+      detalle: '${_servicio(cita)} · sigue en su hora original',
+      momento: rechazado,
+    );
+  }
 
   if (movida != null) {
     return armar(

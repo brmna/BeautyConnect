@@ -150,6 +150,20 @@ TextoAviso avisoDeNovedad(
       cuerpo = '$servicio · nadie la respondió a tiempo';
       detalle = [servicio, _mayuscula(cuando), 'Se venció sin respuesta'];
 
+    case TipoNovedad.cambioRechazado:
+      cuerpo = cuando.isEmpty
+          ? '$servicio · sigue en su hora original'
+          : '$servicio · sigue $cuando';
+      detalle = [servicio, if (cuando.isNotEmpty) 'Sigue $cuando', lugar];
+
+    case TipoNovedad.completada:
+      cuerpo = '$servicio · ¿cómo te fue?';
+      detalle = [
+        servicio,
+        _mayuscula(cuando),
+        'Deja tu reseña, le ayuda a otras personas a elegir',
+      ];
+
     case TipoNovedad.movida:
       cuerpo = cuando.isEmpty ? servicio : '$servicio · ahora es $cuando';
       detalle = [servicio, _mayuscula(cuando), lugar, total];
@@ -165,6 +179,18 @@ TextoAviso avisoDeNovedad(
     titulo: titulo,
     cuerpo: cuerpo.trim(),
     detalle: _juntar(detalle),
+  );
+}
+
+TextoAviso avisoDeMensaje(Map<String, dynamic> chat, {String? nombre}) {
+  final texto = (chat['ultimoMensaje'] as String?)?.trim() ?? '';
+  final servicio = (chat['servicio'] as String?)?.trim() ?? '';
+  final quien = nombre?.trim() ?? '';
+
+  return TextoAviso(
+    titulo: quien.isEmpty ? 'Mensaje nuevo' : 'Mensaje de $quien',
+    cuerpo: texto,
+    detalle: _juntar([texto, if (servicio.isNotEmpty) 'Sobre: $servicio']),
   );
 }
 

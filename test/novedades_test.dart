@@ -9,6 +9,8 @@ Map<String, dynamic> cita({
   DateTime? creada,
   DateTime? respondida,
   DateTime? movida,
+  DateTime? rechazado,
+  DateTime? completada,
   bool autoAceptada = false,
   String servicio = 'Manicure',
 }) => {
@@ -19,6 +21,8 @@ Map<String, dynamic> cita({
   if (creada != null) 'createdAt': Timestamp.fromDate(creada),
   if (respondida != null) 'respondidoEn': Timestamp.fromDate(respondida),
   if (movida != null) 'reagendadaEn': Timestamp.fromDate(movida),
+  if (rechazado != null) 'cambioRechazadoEn': Timestamp.fromDate(rechazado),
+  if (completada != null) 'completadaEn': Timestamp.fromDate(completada),
   if (autoAceptada) 'autoAceptada': true,
 };
 
@@ -47,6 +51,53 @@ void main() {
 
       expect(novedad?.tipo, TipoNovedad.movida);
       expect(novedad?.momento, ahora);
+    });
+
+    test('si le rechazan el cambio de hora se entera', () {
+      final novedad = novedadDeCita(
+        'c1',
+        cita(estado: 'confirmed', respondida: antes, rechazado: ahora),
+        esProfesional: false,
+      );
+
+      expect(novedad?.tipo, TipoNovedad.cambioRechazado);
+      expect(novedad?.momento, ahora);
+    });
+
+    test('un rechazo viejo no tapa una reagenda posterior', () {
+      final novedad = novedadDeCita(
+        'c1',
+        cita(
+          estado: 'confirmed',
+          respondida: antes,
+          rechazado: antes,
+          movida: ahora,
+        ),
+        esProfesional: false,
+      );
+
+      expect(novedad?.tipo, TipoNovedad.movida);
+    });
+
+    test('al terminar la cita le proponen calificar', () {
+      final novedad = novedadDeCita(
+        'c1',
+        cita(estado: 'completed', respondida: antes, completada: ahora),
+        esProfesional: false,
+      );
+
+      expect(novedad?.tipo, TipoNovedad.completada);
+      expect(novedad?.momento, ahora);
+    });
+
+    test('una cita vieja sin sello de cierre no genera novedad', () {
+      final novedad = novedadDeCita(
+        'c1',
+        cita(estado: 'completed', respondida: antes),
+        esProfesional: false,
+      );
+
+      expect(novedad, isNull);
     });
 
     test('su propia cancelacion no le aparece como novedad', () {
@@ -150,6 +201,18 @@ void main() {
       );
 
       expect(novedad?.tipo, TipoNovedad.cancelada);
+    });
+  });
+
+  group('novedadDeCita al completar', () {
+    test('la manicurista no se avisa a sí misma de lo que marcó', () {
+      final novedad = novedadDeCita(
+        'c1',
+        cita(estado: 'completed', respondida: antes, completada: ahora),
+        esProfesional: true,
+      );
+
+      expect(novedad, isNull);
     });
   });
 
