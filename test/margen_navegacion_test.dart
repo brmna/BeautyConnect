@@ -21,6 +21,7 @@ void main() {
     await tester.pumpWidget(
       MaterialApp(
         home: Scaffold(
+          bottomNavigationBar: const SizedBox(height: 60),
           body: Builder(
             builder: (context) => Center(
               child: TextButton(
@@ -100,5 +101,64 @@ void main() {
     final boton = tester.getRect(find.text('Cancelar la cita'));
 
     expect(boton.bottom, lessThanOrEqualTo(alto - _altoBotones));
+  });
+
+  testWidgets('una hoja abierta desde una pestaña respeta la barra', (
+    tester,
+  ) async {
+    simularBotonesDelSistema(tester);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          bottomNavigationBar: const SizedBox(height: 60),
+          body: Builder(
+            builder: (context) => Center(
+              child: TextButton(
+                onPressed: () => abrirHoja<void>(
+                  context,
+                  hijo: Padding(
+                    padding: EdgeInsets.only(
+                      bottom: margenHoja(context, base: 12),
+                    ),
+                    child: const Text('última opción'),
+                  ),
+                ),
+                child: const Text('abrir'),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+
+    await tester.tap(find.text('abrir'));
+    await tester.pumpAndSettle();
+
+    final alto = tester.view.physicalSize.height / tester.view.devicePixelRatio;
+    final opcion = tester.getRect(find.text('última opción'));
+
+    expect(opcion.bottom, lessThanOrEqualTo(alto - _altoBotones));
+  });
+
+  testWidgets('con el teclado abierto la hoja no suma dos veces la franja', (
+    tester,
+  ) async {
+    simularBotonesDelSistema(tester);
+    tester.view.viewInsets = const FakeViewPadding(bottom: 900);
+    late double margen;
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Builder(
+          builder: (context) {
+            margen = margenHoja(context, base: 20);
+            return const SizedBox();
+          },
+        ),
+      ),
+    );
+
+    expect(margen, 20 + 900 / tester.view.devicePixelRatio);
   });
 }

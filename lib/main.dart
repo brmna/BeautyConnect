@@ -56,8 +56,6 @@ class AplicacionBeautyConnect extends StatelessWidget {
 
 final navegadorGlobal = GlobalKey<NavigatorState>();
 
-/// La app está diseñada para ancho de celular. En una pantalla más ancha
-/// (tablet) se ve como una app de celular centrada, en vez de estirada.
 class _MarcoResponsivo extends StatelessWidget {
   static const double anchoMaximo = 480;
 
