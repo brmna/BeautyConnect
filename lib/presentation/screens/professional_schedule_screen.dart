@@ -51,7 +51,7 @@ class _PantallaAgendaProfesionalState extends State<PantallaAgendaProfesional> {
           final horario = horarioSnap.data!;
 
           return ListView(
-            padding: EdgeInsets.zero,
+            padding: EdgeInsets.only(bottom: margenInferior(context, base: 0)),
             children: [
               if (!widget.embebida)
                 CabeceraPantalla(

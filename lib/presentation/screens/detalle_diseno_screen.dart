@@ -13,6 +13,7 @@ import '../widgets/favoritos_optimistas.dart';
 import 'professional_detail_screen.dart';
 import '../widgets/mensaje.dart';
 import '../widgets/visor_fotos.dart';
+import '../../utils/margenes.dart';
 
 class DetalleDisenoScreen extends StatefulWidget {
   final Diseno diseno;
@@ -150,7 +151,12 @@ class _DetalleDisenoScreenState extends State<DetalleDisenoScreen>
           ),
           SliverToBoxAdapter(
             child: Padding(
-              padding: const EdgeInsets.all(20),
+              padding: EdgeInsets.fromLTRB(
+                20,
+                20,
+                20,
+                margenInferior(context, base: 20),
+              ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [

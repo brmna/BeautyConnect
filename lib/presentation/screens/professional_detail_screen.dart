@@ -716,7 +716,10 @@ class _PestanaInfo extends StatelessWidget {
       ),
     );
 
-    return ListView(padding: const EdgeInsets.all(16), children: bloques);
+    return ListView(
+      padding: EdgeInsets.fromLTRB(16, 16, 16, margenInferior(context)),
+      children: bloques,
+    );
   }
 }
 

@@ -8,6 +8,7 @@ import '../../utils/formato.dart';
 import '../widgets/avatar_persona.dart';
 import '../widgets/estado_vacio.dart';
 import 'chat_screen.dart';
+import '../../utils/margenes.dart';
 
 class BandejaChatsScreen extends StatefulWidget {
   final bool esProfesional;
@@ -98,7 +99,12 @@ class _BandejaChatsScreenState extends State<BandejaChatsScreen> {
           }
 
           return ListView.separated(
-            padding: const EdgeInsets.symmetric(vertical: 8),
+            padding: EdgeInsets.fromLTRB(
+              0,
+              8,
+              0,
+              margenInferior(context, base: 8),
+            ),
             itemCount: conversaciones.length,
             separatorBuilder: (_, _) =>
                 const Divider(height: 1, indent: 76, color: TemaApp.grisBorde),

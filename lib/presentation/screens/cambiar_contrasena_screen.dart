@@ -5,6 +5,7 @@ import '../../theme/app_theme.dart';
 import '../../utils/mensajes_auth.dart';
 import '../widgets/mensaje.dart';
 import 'recuperar_contrasena_screen.dart';
+import '../../utils/margenes.dart';
 
 class CambiarContrasenaScreen extends StatefulWidget {
   const CambiarContrasenaScreen({super.key});
@@ -88,7 +89,7 @@ class _CambiarContrasenaScreenState extends State<CambiarContrasenaScreen> {
       body: Form(
         key: _formulario,
         child: ListView(
-          padding: const EdgeInsets.all(16),
+          padding: EdgeInsets.fromLTRB(16, 16, 16, margenInferior(context)),
           children: [
             Container(
               padding: const EdgeInsets.all(16),
