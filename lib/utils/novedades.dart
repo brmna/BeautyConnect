@@ -23,6 +23,8 @@ class Novedad {
 
   final String? plantilla;
 
+  final Map<String, dynamic> cita;
+
   const Novedad({
     required this.citaId,
     required this.tipo,
@@ -31,6 +33,7 @@ class Novedad {
     required this.momento,
     this.personaId = '',
     this.plantilla,
+    this.cita = const {},
   });
 
   static const String marcaNombre = '{nombre}';
@@ -94,6 +97,7 @@ Novedad? novedadDeCita(
       momento: momento,
       personaId: personaId,
       plantilla: plantilla,
+      cita: cita,
     );
   }
 

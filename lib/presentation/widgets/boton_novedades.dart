@@ -5,6 +5,7 @@ import '../../data/services/cache_perfiles.dart';
 import '../../theme/app_theme.dart';
 import '../../utils/margenes.dart';
 import '../../utils/novedades.dart';
+import '../../utils/texto_aviso.dart';
 import 'estado_vacio.dart';
 import 'hoja_modal.dart';
 
@@ -259,7 +260,10 @@ class _Fila extends StatelessWidget {
                   ),
                   const SizedBox(height: 2),
                   Text(
-                    novedad.detalle,
+                    avisoDeNovedad(
+                      novedad,
+                      esProfesional: esProfesional,
+                    ).cuerpo,
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                     style: const TextStyle(

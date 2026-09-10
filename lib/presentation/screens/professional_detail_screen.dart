@@ -29,6 +29,7 @@ import '../../utils/genero.dart';
 import '../widgets/estrellas.dart';
 import '../widgets/cabecera_pantalla.dart';
 import '../widgets/mapa_zonas.dart';
+import '../widgets/tarjeta_servicio.dart';
 import '../widgets/mensaje.dart';
 import '../widgets/resenas.dart';
 import '../widgets/rejilla_opciones.dart';
@@ -827,120 +828,18 @@ class _PestanaServicios extends StatelessWidget {
           itemBuilder: (context, indice) {
             final documento = servicios[indice];
             final servicio = documento.data();
-            final foto = servicio['imageUrl'] as String?;
 
-            return Card(
-              margin: const EdgeInsets.only(bottom: 12),
-              child: Padding(
-                padding: const EdgeInsets.all(12),
-                child: Row(
-                  children: [
-                    ClipRRect(
-                      borderRadius: BorderRadius.circular(10),
-                      child: (foto != null && foto.isNotEmpty)
-                          ? Image.network(
-                              ServicioSubidaImagenes.miniatura(
-                                foto,
-                                ancho: 200,
-                              ),
-                              width: 64,
-                              height: 64,
-                              fit: BoxFit.cover,
-                              errorBuilder: (_, _, _) => const _IconoServicio(),
-                            )
-                          : const _IconoServicio(),
-                    ),
-                    const SizedBox(width: 14),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            servicio['name'] ?? '',
-                            style: const TextStyle(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 15,
-                            ),
-                          ),
-                          if ((servicio['description'] as String?)
-                                  ?.trim()
-                                  .isNotEmpty ??
-                              false) ...[
-                            const SizedBox(height: 2),
-                            Text(
-                              servicio['description'].toString().trim(),
-                              maxLines: 2,
-                              overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(
-                                fontSize: 12,
-                                color: TemaApp.grisSubtitulo,
-                              ),
-                            ),
-                          ],
-                          const SizedBox(height: 6),
-                          Row(
-                            children: [
-                              const Icon(
-                                Icons.access_time,
-                                size: 13,
-                                color: TemaApp.grisTexto,
-                              ),
-                              const SizedBox(width: 4),
-                              Flexible(
-                                child: Text(
-                                  '${formatearDuracionCorta((servicio['duration'] as num?)?.toInt() ?? 0)} aprox.',
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: const TextStyle(
-                                    fontSize: 12,
-                                    color: TemaApp.grisSubtitulo,
-                                  ),
-                                ),
-                              ),
-                              const SizedBox(width: 12),
-                              Text(
-                                formatearPrecio(servicio['price'] as num?),
-                                style: const TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 14,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    ElevatedButton(
-                      onPressed: () => onReservar(documento.id, servicio),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: TemaApp.negro,
-                        foregroundColor: TemaApp.blanco,
-                        padding: const EdgeInsets.symmetric(horizontal: 16),
-                      ),
-                      child: const Text('Reservar'),
-                    ),
-                  ],
-                ),
+            return TarjetaServicio(
+              servicio: servicio,
+              onTap: () => onReservar(documento.id, servicio),
+              accion: FilledButton(
+                onPressed: () => onReservar(documento.id, servicio),
+                child: const Text('Reservar'),
               ),
             );
           },
         );
       },
-    );
-  }
-}
-
-class _IconoServicio extends StatelessWidget {
-  const _IconoServicio();
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: 64,
-      height: 64,
-      color: TemaApp.grisClaro,
-      child: const Icon(Icons.spa, color: TemaApp.textoOscuro),
     );
   }
 }
@@ -1697,9 +1596,12 @@ class _ResumenServicios extends StatelessWidget {
           hijo: Column(
             children: [
               ...visibles.map(
-                (documento) => _FilaServicio(
+                (documento) => FilaServicio(
                   servicio: documento.data(),
-                  onReservar: () => onReservar(documento.id, documento.data()),
+                  accion: TextButton(
+                    onPressed: () => onReservar(documento.id, documento.data()),
+                    child: const Text('Reservar'),
+                  ),
                 ),
               ),
               if (restantes > 0) ...[
@@ -1721,82 +1623,6 @@ class _ResumenServicios extends StatelessWidget {
           ),
         );
       },
-    );
-  }
-}
-
-class _FilaServicio extends StatelessWidget {
-  final Map<String, dynamic> servicio;
-  final VoidCallback onReservar;
-
-  const _FilaServicio({required this.servicio, required this.onReservar});
-
-  @override
-  Widget build(BuildContext context) {
-    final foto = (servicio['imageUrl'] as String?)?.trim() ?? '';
-    final duracion = (servicio['duration'] as num?)?.toInt() ?? 0;
-
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 10),
-      child: Row(
-        children: [
-          ClipRRect(
-            borderRadius: BorderRadius.circular(10),
-            child: SizedBox(
-              width: 48,
-              height: 48,
-              child: foto.isEmpty
-                  ? Container(
-                      color: TemaApp.grisClaro,
-                      child: const Icon(
-                        Icons.spa,
-                        color: TemaApp.textoOscuro,
-                        size: 20,
-                      ),
-                    )
-                  : Image.network(
-                      ServicioSubidaImagenes.miniatura(foto, ancho: 150),
-                      fit: BoxFit.cover,
-                      gaplessPlayback: true,
-                      errorBuilder: (_, _, _) => Container(
-                        color: TemaApp.grisClaro,
-                        child: const Icon(
-                          Icons.spa,
-                          color: TemaApp.textoOscuro,
-                          size: 20,
-                        ),
-                      ),
-                    ),
-            ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  servicio['name'] ?? '',
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    fontWeight: FontWeight.w600,
-                    fontSize: 14,
-                  ),
-                ),
-                Text(
-                  '${formatearPrecio(servicio['price'] as num?)}  ·  '
-                  '${formatearDuracionCorta(duracion)} aprox.',
-                  style: const TextStyle(
-                    fontSize: 12,
-                    color: TemaApp.grisSubtitulo,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          TextButton(onPressed: onReservar, child: const Text('Reservar')),
-        ],
-      ),
     );
   }
 }

@@ -4,10 +4,13 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 
 import '../data/models/cambio_solicitado.dart';
+import '../data/services/cache_perfiles.dart';
 import '../data/services/servicio_disponibilidad.dart';
 import '../data/services/servicio_notificaciones.dart';
 import '../utils/estado_cita.dart';
 import '../utils/franjas_cita.dart';
+import '../utils/novedades.dart';
+import '../utils/texto_aviso.dart';
 
 class SincronizadorRecordatorios extends StatefulWidget {
   final String uid;
@@ -30,8 +33,9 @@ class _SincronizadorRecordatoriosState
     extends State<SincronizadorRecordatorios> {
   StreamSubscription<QuerySnapshot>? _suscripcion;
 
-  final _estadoPrevio = <String, String>{};
+  final _firmaPrevia = <String, String>{};
   final _caducando = <String>{};
+  final _perfiles = CachePerfiles();
   bool _primeraCarga = true;
 
   @override
@@ -60,15 +64,10 @@ class _SincronizadorRecordatoriosState
         .collection('bookings')
         .where(campo, isEqualTo: widget.uid)
         .snapshots()
-        .listen((consulta) {
+        .listen((consulta) async {
           _caducarAbandonadas(consulta.docs);
-          _avisarDeLosCambios(consulta.docs);
-
-          final recordatorios = ServicioNotificaciones.desdeCitas(
-            consulta.docs,
-            esProfesional: widget.esProfesional,
-          );
-          ServicioNotificaciones.instancia.sincronizar(recordatorios);
+          await _avisarDeLosCambios(consulta.docs);
+          await _programarRecordatorios(consulta.docs);
         }, onError: (_) {});
   }
 
@@ -112,64 +111,82 @@ class _SincronizadorRecordatoriosState
     }
   }
 
-  void _avisarDeLosCambios(List<QueryDocumentSnapshot> documentos) {
-    final avisos = <({String titulo, String cuerpo})>[];
+  Future<void> _avisarDeLosCambios(
+    List<QueryDocumentSnapshot> documentos,
+  ) async {
+    final nuevas = <Novedad>[];
 
     for (final documento in documentos) {
       final datos = documento.data() as Map<String, dynamic>;
-      final estado = (datos['status'] as String?) ?? 'pending';
-      final anterior = _estadoPrevio[documento.id];
-      _estadoPrevio[documento.id] = estado;
-
-      if (_primeraCarga || anterior == estado) continue;
-
-      final servicio = (datos['serviceName'] as String?) ?? 'una cita';
-      final texto = _texto(
-        nuevo: estado,
-        esNueva: anterior == null,
-        canceladaPor: datos['canceladaPor'] as String?,
+      final novedad = novedadDeCita(
+        documento.id,
+        datos,
+        esProfesional: widget.esProfesional,
       );
-      if (texto != null) avisos.add((titulo: texto, cuerpo: servicio));
+
+      final firma = novedad == null
+          ? ''
+          : '${novedad.tipo.name}|${novedad.momento.toIso8601String()}';
+
+      final anterior = _firmaPrevia[documento.id];
+      _firmaPrevia[documento.id] = firma;
+
+      if (_primeraCarga || novedad == null || anterior == firma) continue;
+      nuevas.add(novedad);
     }
 
     _primeraCarga = false;
 
-    for (final aviso in avisos.take(3)) {
-      ServicioNotificaciones.instancia.avisarAhora(
-        titulo: aviso.titulo,
-        cuerpo: aviso.cuerpo,
+    for (final novedad in nuevas.take(3)) {
+      await ServicioNotificaciones.instancia.avisarAhora(
+        avisoDeNovedad(
+          novedad,
+          esProfesional: widget.esProfesional,
+          nombre: await _nombre(novedad.personaId),
+        ),
       );
     }
   }
 
-  String? _texto({
-    required String nuevo,
-    required bool esNueva,
-    required String? canceladaPor,
-  }) {
-    if (nuevo == 'cancelled') {
-      if (canceladaPor == canceladaPorSistema) {
-        return widget.esProfesional
-            ? 'Una solicitud se venció sin respuesta'
-            : 'Tu solicitud venció sin respuesta';
-      }
+  Future<void> _programarRecordatorios(
+    List<QueryDocumentSnapshot> documentos,
+  ) async {
+    final nombres = <String, String>{};
+    final ahora = DateTime.now();
 
-      final mio = widget.esProfesional ? 'profesional' : 'cliente';
-      if (canceladaPor == mio) return null;
+    for (final documento in documentos) {
+      final datos = documento.data() as Map<String, dynamic>;
+      if (datos['status'] != 'confirmed') continue;
 
-      return widget.esProfesional
-          ? 'Un cliente canceló su cita'
-          : 'Cancelaron tu cita';
+      final fecha = inicioCita(datos);
+      if (fecha == null || !fecha.isAfter(ahora)) continue;
+
+      final uid = ServicioNotificaciones.otraPersona(
+        datos,
+        esProfesional: widget.esProfesional,
+      );
+      if (uid.isEmpty || nombres.containsKey(uid)) continue;
+
+      nombres[uid] = await _nombre(uid);
     }
 
-    if (widget.esProfesional) {
-      if (!esNueva) return null;
-      if (nuevo == 'pending') return 'Nueva solicitud de cita';
-      if (nuevo == 'confirmed') return 'Tienes una cita nueva';
-      return null;
-    }
+    await ServicioNotificaciones.instancia.sincronizar(
+      ServicioNotificaciones.desdeCitas(
+        documentos,
+        esProfesional: widget.esProfesional,
+        nombres: nombres,
+      ),
+    );
+  }
 
-    return nuevo == 'confirmed' ? 'Confirmaron tu cita' : null;
+  Future<String> _nombre(String uid) async {
+    if (uid.isEmpty) return '';
+
+    try {
+      return (await _perfiles.resumen(uid)).nombre;
+    } catch (_) {
+      return '';
+    }
   }
 
   @override

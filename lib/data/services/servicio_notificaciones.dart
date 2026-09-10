@@ -1,20 +1,24 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
-import 'package:intl/intl.dart';
 import 'package:timezone/data/latest_all.dart' as datos_zonas;
 import 'package:timezone/timezone.dart' as zonas;
 
+import '../../utils/estado_cita.dart';
+import '../../utils/texto_aviso.dart';
+
 class RecordatorioCita {
   final String citaId;
-  final String titulo;
-  final String cuerpo;
   final DateTime fechaCita;
+  final Map<String, dynamic> cita;
+  final bool esProfesional;
+  final String persona;
 
   const RecordatorioCita({
     required this.citaId,
-    required this.titulo,
-    required this.cuerpo,
     required this.fechaCita,
+    required this.cita,
+    required this.esProfesional,
+    this.persona = '',
   });
 }
 
@@ -126,10 +130,12 @@ class ServicioNotificaciones {
         await _programar(
           exacta: exactas,
           id: _identificador(cita.citaId, horas),
-          titulo: cita.titulo,
-          cuerpo: horas >= 24
-              ? 'Mañana ${DateFormat.jm().format(cita.fechaCita)} - ${cita.cuerpo}'
-              : 'En $horas horas - ${cita.cuerpo}',
+          texto: avisoDeRecordatorio(
+            cita.cita,
+            horasAntes: horas,
+            esProfesional: cita.esProfesional,
+            nombre: cita.persona,
+          ),
           momento: momento,
         );
       }
@@ -144,7 +150,7 @@ class ServicioNotificaciones {
             .map(
               (c) =>
                   '${c.citaId}|${c.fechaCita.toIso8601String()}'
-                  '|${c.titulo}|${c.cuerpo}',
+                  '|${c.persona}|${servicioDeCita(c.cita)}',
             )
             .toList()
           ..sort();
@@ -152,10 +158,7 @@ class ServicioNotificaciones {
     return lineas.join(';');
   }
 
-  Future<void> avisarAhora({
-    required String titulo,
-    required String cuerpo,
-  }) async {
+  Future<void> avisarAhora(TextoAviso texto) async {
     if (!_iniciado) await iniciar();
     if (!await hayPermiso()) return;
 
@@ -165,16 +168,36 @@ class ServicioNotificaciones {
 
     await _plugin.show(
       _siguienteAviso,
-      titulo,
-      cuerpo,
-      const NotificationDetails(
-        android: AndroidNotificationDetails(
-          _idCanalAvisos,
-          'Movimientos de tus citas',
-          channelDescription:
-              'Solicitudes nuevas, confirmaciones y cancelaciones',
-          importance: Importance.high,
-          priority: Priority.high,
+      texto.titulo,
+      texto.cuerpo,
+      _detalles(
+        canal: _idCanalAvisos,
+        nombre: 'Movimientos de tus citas',
+        descripcion: 'Solicitudes nuevas, confirmaciones y cancelaciones',
+        texto: texto,
+      ),
+    );
+  }
+
+  NotificationDetails _detalles({
+    required String canal,
+    required String nombre,
+    required String descripcion,
+    required TextoAviso texto,
+  }) {
+    return NotificationDetails(
+      android: AndroidNotificationDetails(
+        canal,
+        nombre,
+        channelDescription: descripcion,
+        importance: Importance.high,
+        priority: Priority.high,
+        ticker: texto.titulo,
+        category: AndroidNotificationCategory.event,
+        styleInformation: BigTextStyleInformation(
+          texto.detalle.isEmpty ? texto.cuerpo : texto.detalle,
+          contentTitle: texto.titulo,
+          summaryText: texto.cuerpo,
         ),
       ),
     );
@@ -183,23 +206,19 @@ class ServicioNotificaciones {
   Future<void> _programar({
     required bool exacta,
     required int id,
-    required String titulo,
-    required String cuerpo,
+    required TextoAviso texto,
     required DateTime momento,
   }) async {
     await _plugin.zonedSchedule(
       id,
-      titulo,
-      cuerpo,
+      texto.titulo,
+      texto.cuerpo,
       zonas.TZDateTime.from(momento, zonas.local),
-      const NotificationDetails(
-        android: AndroidNotificationDetails(
-          _idCanal,
-          'Recordatorios de citas',
-          channelDescription: 'Avisos antes de cada cita agendada',
-          importance: Importance.high,
-          priority: Priority.high,
-        ),
+      _detalles(
+        canal: _idCanal,
+        nombre: 'Recordatorios de citas',
+        descripcion: 'Avisos antes de cada cita agendada',
+        texto: texto,
       ),
       androidScheduleMode: exacta
           ? AndroidScheduleMode.exactAllowWhileIdle
@@ -210,9 +229,19 @@ class ServicioNotificaciones {
   int _identificador(String citaId, int horas) =>
       (citaId.hashCode ^ horas.hashCode) & 0x7fffffff;
 
+  static String otraPersona(
+    Map<String, dynamic> cita, {
+    required bool esProfesional,
+  }) =>
+      (esProfesional
+          ? cita['clientId'] as String?
+          : cita['professionalId'] as String?) ??
+      '';
+
   static List<RecordatorioCita> desdeCitas(
     List<QueryDocumentSnapshot> documentos, {
     required bool esProfesional,
+    Map<String, String> nombres = const {},
   }) {
     final recordatorios = <RecordatorioCita>[];
     final ahora = DateTime.now();
@@ -221,17 +250,18 @@ class ServicioNotificaciones {
       final datos = documento.data() as Map<String, dynamic>;
       if (datos['status'] != 'confirmed') continue;
 
-      final fecha = (datos['date'] as Timestamp?)?.toDate();
+      final fecha = inicioCita(datos);
       if (fecha == null || !fecha.isAfter(ahora)) continue;
+
+      final persona = otraPersona(datos, esProfesional: esProfesional);
 
       recordatorios.add(
         RecordatorioCita(
           citaId: documento.id,
-          titulo: esProfesional
-              ? 'Tienes una cita agendada'
-              : 'Recordatorio de tu cita',
-          cuerpo: datos['serviceName'] ?? 'Cita agendada',
           fechaCita: fecha,
+          cita: datos,
+          esProfesional: esProfesional,
+          persona: nombres[persona] ?? '',
         ),
       );
     }

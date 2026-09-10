@@ -7,6 +7,7 @@ import '../widgets/hoja_modal.dart';
 import '../../theme/app_theme.dart';
 import '../../utils/formato.dart';
 import '../widgets/mensaje.dart';
+import '../widgets/tarjeta_servicio.dart';
 import '../../utils/margenes.dart';
 import '../../utils/validaciones.dart';
 
@@ -74,91 +75,31 @@ class ProfessionalServicesScreen extends StatelessWidget {
               final doc = docs[index];
               final data = doc.data() as Map<String, dynamic>;
 
-              return Card(
-                margin: const EdgeInsets.only(bottom: 12),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                elevation: 0,
-                child: ListTile(
-                  contentPadding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 8,
-                  ),
-                  leading: _MiniaturaServicio(url: data['imageUrl']),
-                  title: Text(
-                    data['name'] ?? '',
-                    style: const TextStyle(fontWeight: FontWeight.bold),
-                  ),
-                  subtitle: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      if ((data['description'] as String?)?.trim().isNotEmpty ??
-                          false) ...[
-                        Text(
-                          data['description'].toString().trim(),
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
-                            color: TemaApp.grisSubtitulo,
-                            fontSize: 12,
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                      ],
-                      Row(
-                        children: [
-                          const Icon(
-                            Icons.access_time,
-                            size: 14,
-                            color: TemaApp.grisTexto,
-                          ),
-                          Text(
-                            '  ${formatearDuracionCorta((data['duration'] as num?)?.toInt() ?? 0)} aprox.',
-                            style: const TextStyle(
-                              fontSize: 12,
-                              color: TemaApp.grisSubtitulo,
-                            ),
-                          ),
-                        ],
+              return TarjetaServicio(
+                servicio: data,
+                onTap: () => _showServiceDialog(context, doc.id, data),
+                menu: PopupMenuButton<String>(
+                  tooltip: 'Opciones',
+                  padding: EdgeInsets.zero,
+                  iconSize: 20,
+                  constraints: const BoxConstraints(),
+                  onSelected: (opcion) {
+                    if (opcion == 'editar') {
+                      _showServiceDialog(context, doc.id, data);
+                    } else if (opcion == 'eliminar') {
+                      _deleteService(context, doc.id);
+                    }
+                  },
+                  itemBuilder: (context) => const [
+                    PopupMenuItem(value: 'editar', child: Text('Editar')),
+                    PopupMenuItem(
+                      value: 'eliminar',
+                      child: Text(
+                        'Eliminar',
+                        style: TextStyle(color: TemaApp.error),
                       ),
-                    ],
-                  ),
-                  trailing: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        formatearPrecio(data['price'] as num?),
-                        style: const TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 16,
-                          color: TemaApp.textoOscuro,
-                        ),
-                      ),
-                      PopupMenuButton<String>(
-                        onSelected: (value) {
-                          if (value == 'edit') {
-                            _showServiceDialog(context, doc.id, data);
-                          } else if (value == 'delete') {
-                            _deleteService(context, doc.id);
-                          }
-                        },
-                        itemBuilder: (context) => [
-                          const PopupMenuItem(
-                            value: 'edit',
-                            child: Text('Editar'),
-                          ),
-                          const PopupMenuItem(
-                            value: 'delete',
-                            child: Text(
-                              'Eliminar',
-                              style: TextStyle(color: Colors.red),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
               );
             },
@@ -477,39 +418,6 @@ class _ServiceFormSheetState extends State<_ServiceFormSheet> {
             const SizedBox(height: 24),
           ],
         ),
-      ),
-    );
-  }
-}
-
-class _MiniaturaServicio extends StatelessWidget {
-  final String? url;
-
-  const _MiniaturaServicio({required this.url});
-
-  @override
-  Widget build(BuildContext context) {
-    if (url == null || url!.isEmpty) {
-      return Container(
-        width: 48,
-        height: 48,
-        decoration: BoxDecoration(
-          color: TemaApp.grisClaro,
-          borderRadius: BorderRadius.circular(12),
-        ),
-        child: const Icon(Icons.spa, color: TemaApp.textoOscuro),
-      );
-    }
-
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(12),
-      child: Image.network(
-        ServicioSubidaImagenes.miniatura(url!, ancho: 200),
-        width: 48,
-        height: 48,
-        fit: BoxFit.cover,
-        errorBuilder: (_, _, _) =>
-            Container(width: 48, height: 48, color: TemaApp.grisBorde),
       ),
     );
   }
