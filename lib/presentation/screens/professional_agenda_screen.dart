@@ -15,6 +15,7 @@ import '../../utils/franjas_cita.dart';
 import '../../data/services/servicio_resenas_clientes.dart';
 import '../widgets/avatar_persona.dart';
 import '../widgets/bloque_lugar.dart';
+import '../widgets/fotos_referencia.dart';
 import '../widgets/boton_novedades.dart';
 import '../widgets/cabecera_pantalla.dart';
 import '../widgets/confirmacion.dart';
@@ -903,6 +904,7 @@ class _TarjetaSolicitud extends StatelessWidget {
                 finalizada: estado == 'completed' || estado == 'cancelled',
                 desde: desde,
               ),
+            BloqueReferencia(cita: datos, titulo: 'Diseño que quiere'),
             if (vencida) ...[
               const SizedBox(height: 12),
               const Text(

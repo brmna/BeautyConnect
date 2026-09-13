@@ -3,6 +3,7 @@ import 'package:intl/intl.dart';
 
 import '../../utils/distancia.dart';
 import '../../utils/estado_cita.dart';
+import '../../utils/fotos_referencia.dart';
 import '../../utils/franjas_cita.dart';
 import '../models/ajustes_profesional.dart';
 import '../models/cambio_solicitado.dart';
@@ -317,7 +318,10 @@ class ServicioDisponibilidad {
     required int intervalo,
     ModalidadCita modalidad = ModalidadCita.local,
     Ubicacion? ubicacionCliente,
+    List<String> fotosReferencia = const [],
   }) async {
+    final referencias = limpiarFotosReferencia(fotosReferencia);
+
     final refDia = _refDia(profesionalId, fecha);
     final refCita = _db.collection('bookings').doc();
     final horas = horasOcupadas(
@@ -406,6 +410,7 @@ class ServicioDisponibilidad {
         'slots': horas,
         'status': confirmada ? 'confirmed' : 'pending',
         'modalidad': modalidad.clave,
+        if (referencias.isNotEmpty) claveFotosReferencia: referencias,
         if (aDomicilio) ...{
           'recargoDomicilio': ajustes.recargoDomicilio,
           'barrioCliente': zonaCliente?.barrio ?? '',

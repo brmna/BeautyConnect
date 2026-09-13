@@ -1,13 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
-final NumberFormat _pesos = NumberFormat.currency(
-  locale: 'es_CO',
-  symbol: '\$',
-  decimalDigits: 0,
-);
+final NumberFormat _pesos = NumberFormat('#,##0', 'es_CO');
 
-String formatearPrecio(num? valor) => _pesos.format(valor ?? 0);
+String formatearPrecio(num? valor) => '\$${_pesos.format(valor ?? 0)}';
 
 String formatearFecha(DateTime fecha) => DateFormat.yMMMd().format(fecha);
 

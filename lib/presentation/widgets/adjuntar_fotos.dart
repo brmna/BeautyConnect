@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../data/services/servicio_subida_imagenes.dart';
+import '../../theme/app_theme.dart';
 
 class AdjuntarFotos extends StatelessWidget {
   final String titulo;
@@ -29,11 +30,17 @@ class AdjuntarFotos extends StatelessWidget {
       children: [
         Row(
           children: [
-            Text(
-              titulo,
-              style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
+            Expanded(
+              child: Text(
+                titulo,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  fontWeight: FontWeight.w600,
+                  fontSize: 13,
+                ),
+              ),
             ),
-            const Spacer(),
             TextButton.icon(
               onPressed: (subiendo || !_cabenMas) ? null : onAgregar,
               icon: subiendo
@@ -66,6 +73,17 @@ class AdjuntarFotos extends StatelessWidget {
                       width: 78,
                       height: 78,
                       fit: BoxFit.cover,
+                      gaplessPlayback: true,
+                      errorBuilder: (_, _, _) => Container(
+                        width: 78,
+                        height: 78,
+                        color: TemaApp.grisBorde,
+                        child: const Icon(
+                          Icons.broken_image_outlined,
+                          size: 20,
+                          color: TemaApp.grisTexto,
+                        ),
+                      ),
                     ),
                   ),
                   Positioned(

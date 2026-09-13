@@ -15,7 +15,7 @@ class MiniaturaServicio extends StatelessWidget {
   final String foto;
   final double lado;
 
-  const MiniaturaServicio({super.key, required this.foto, this.lado = 60});
+  const MiniaturaServicio({super.key, required this.foto, this.lado = 56});
 
   @override
   Widget build(BuildContext context) {
@@ -30,7 +30,7 @@ class MiniaturaServicio extends StatelessWidget {
     );
 
     return ClipRRect(
-      borderRadius: BorderRadius.circular(10),
+      borderRadius: BorderRadius.circular(12),
       child: SizedBox(
         width: lado,
         height: lado,
@@ -58,29 +58,39 @@ class DatoServicio extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      decoration: BoxDecoration(
-        color: TemaApp.grisClaro,
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icono, size: 13, color: TemaApp.grisSubtitulo),
-          const SizedBox(width: 5),
-          Flexible(
-            child: Text(
-              texto,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: const TextStyle(
-                fontSize: 11.5,
-                color: TemaApp.grisSubtitulo,
-              ),
-            ),
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(icono, size: 13, color: TemaApp.grisTexto),
+        const SizedBox(width: 5),
+        Flexible(
+          child: Text(
+            texto,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(fontSize: 12, color: TemaApp.grisSubtitulo),
           ),
-        ],
+        ),
+      ],
+    );
+  }
+}
+
+class PrecioServicio extends StatelessWidget {
+  final num? precio;
+
+  const PrecioServicio({super.key, required this.precio});
+
+  @override
+  Widget build(BuildContext context) {
+    return Text(
+      formatearPrecio(precio),
+      maxLines: 1,
+      overflow: TextOverflow.ellipsis,
+      style: const TextStyle(
+        fontSize: 17,
+        fontWeight: FontWeight.bold,
+        color: TemaApp.textoOscuro,
       ),
     );
   }
@@ -116,22 +126,23 @@ class TarjetaServicio extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
+                crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
                   MiniaturaServicio(foto: textoServicio(servicio['imageUrl'])),
                   const SizedBox(width: 12),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
                       children: [
                         Text(
                           nombreServicio(servicio),
                           maxLines: 2,
                           overflow: TextOverflow.ellipsis,
                           style: const TextStyle(
-                            fontSize: 15,
+                            fontSize: 15.5,
                             fontWeight: FontWeight.bold,
-                            height: 1.25,
+                            height: 1.2,
                           ),
                         ),
                         if (descripcion.isNotEmpty) ...[
@@ -147,46 +158,58 @@ class TarjetaServicio extends StatelessWidget {
                             ),
                           ),
                         ],
+                        if (duracion > 0) ...[
+                          const SizedBox(height: 5),
+                          DatoServicio(
+                            icono: Icons.schedule,
+                            texto: '${formatearDuracionCorta(duracion)} aprox.',
+                          ),
+                        ],
                       ],
                     ),
                   ),
                   ?menu,
                 ],
               ),
-              const SizedBox(height: 10),
+              const Padding(
+                padding: EdgeInsets.symmetric(vertical: 9),
+                child: Divider(
+                  height: 1,
+                  thickness: 1,
+                  color: TemaApp.grisClaro,
+                ),
+              ),
               Row(
                 children: [
-                  Expanded(
-                    child: Wrap(
-                      spacing: 8,
-                      runSpacing: 6,
-                      crossAxisAlignment: WrapCrossAlignment.center,
-                      children: [
-                        Text(
-                          formatearPrecio(servicio['price'] as num?),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
-                            fontSize: 15,
-                            fontWeight: FontWeight.bold,
-                            color: TemaApp.textoOscuro,
-                          ),
-                        ),
-                        if (duracion > 0)
-                          DatoServicio(
-                            icono: Icons.schedule,
-                            texto: '${formatearDuracionCorta(duracion)} aprox.',
-                          ),
-                      ],
-                    ),
-                  ),
-                  if (accion != null) ...[const SizedBox(width: 8), accion!],
+                  Expanded(child: PrecioServicio(precio: servicio['price'])),
+                  if (accion != null) ...[const SizedBox(width: 10), accion!],
                 ],
               ),
             ],
           ),
         ),
       ),
+    );
+  }
+}
+
+class BotonReservar extends StatelessWidget {
+  final VoidCallback onReservar;
+
+  const BotonReservar({super.key, required this.onReservar});
+
+  @override
+  Widget build(BuildContext context) {
+    return FilledButton(
+      onPressed: onReservar,
+      style: FilledButton.styleFrom(
+        padding: const EdgeInsets.symmetric(horizontal: 22),
+        minimumSize: const Size(0, 38),
+        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+        textStyle: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      ),
+      child: const Text('Reservar'),
     );
   }
 }
@@ -200,7 +223,6 @@ class FilaServicio extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final duracion = (servicio['duration'] as num?)?.toInt() ?? 0;
-    final precio = formatearPrecio(servicio['price'] as num?);
 
     return Padding(
       padding: const EdgeInsets.only(bottom: 10),
@@ -228,8 +250,9 @@ class FilaServicio extends StatelessWidget {
                 const SizedBox(height: 2),
                 Text(
                   duracion > 0
-                      ? '$precio  ·  ${formatearDuracionCorta(duracion)} aprox.'
-                      : precio,
+                      ? '${formatearPrecio(servicio['price'])}  ·  '
+                            '${formatearDuracionCorta(duracion)}'
+                      : formatearPrecio(servicio['price']),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: const TextStyle(

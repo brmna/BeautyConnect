@@ -28,7 +28,9 @@ import '../../utils/enlaces.dart';
 import '../../utils/genero.dart';
 import '../widgets/estrellas.dart';
 import '../widgets/cabecera_pantalla.dart';
+import '../widgets/fotos_referencia.dart';
 import '../widgets/mapa_zonas.dart';
+import '../../utils/fotos_referencia.dart';
 import '../widgets/tarjeta_servicio.dart';
 import '../widgets/mensaje.dart';
 import '../widgets/resenas.dart';
@@ -832,9 +834,8 @@ class _PestanaServicios extends StatelessWidget {
             return TarjetaServicio(
               servicio: servicio,
               onTap: () => onReservar(documento.id, servicio),
-              accion: FilledButton(
-                onPressed: () => onReservar(documento.id, servicio),
-                child: const Text('Reservar'),
+              accion: BotonReservar(
+                onReservar: () => onReservar(documento.id, servicio),
               ),
             );
           },
@@ -990,6 +991,9 @@ class _BookingSheet extends StatefulWidget {
 
 class _BookingSheetState extends State<_BookingSheet> {
   final _servicio = ServicioDisponibilidad();
+  final _subida = ServicioSubidaImagenes();
+  final List<String> _referencias = [];
+  bool _subiendoReferencia = false;
 
   List<DateTime> _dias = const [];
   DateTime _fecha = DateTime.now();
@@ -1093,9 +1097,89 @@ class _BookingSheetState extends State<_BookingSheet> {
     }
   }
 
+  Future<void> _agregarReferencia() async {
+    final mensajero = ScaffoldMessenger.of(context);
+
+    try {
+      final archivo = await _subida.elegirImagen(desdeCamara: false);
+      if (archivo == null) return;
+
+      if (mounted) setState(() => _subiendoReferencia = true);
+      final imagen = await _subida.subir(archivo);
+
+      if (mounted) {
+        setState(() {
+          _referencias
+            ..clear()
+            ..addAll(limpiarFotosReferencia([..._referencias, imagen.url]));
+        });
+      }
+    } catch (_) {
+      mensajero.showSnackBar(
+        construirMensaje(
+          'No se pudo subir la foto. Puedes reservar sin ella',
+          tipo: TipoAviso.error,
+        ),
+      );
+    }
+
+    if (mounted) setState(() => _subiendoReferencia = false);
+  }
+
+  Widget _bloqueReferencia() {
+    if (!_subida.estaConfigurado) return const SizedBox.shrink();
+
+    return Padding(
+      padding: const EdgeInsets.only(top: 22),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Flexible(
+                child: Text(
+                  '¿Tienes un diseño en mente?',
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                decoration: BoxDecoration(
+                  color: TemaApp.grisClaro,
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: const Text(
+                  'Opcional',
+                  style: TextStyle(
+                    fontSize: 10.5,
+                    fontWeight: FontWeight.w600,
+                    color: TemaApp.grisSubtitulo,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 4),
+          const Text(
+            'Con una foto sabrá exactamente qué quieres',
+            style: TextStyle(fontSize: 12, color: TemaApp.grisSubtitulo),
+          ),
+          const SizedBox(height: 10),
+          SubirReferencia(
+            fotos: _referencias,
+            subiendo: _subiendoReferencia,
+            onAgregar: _agregarReferencia,
+            onQuitar: () => setState(_referencias.clear),
+          ),
+        ],
+      ),
+    );
+  }
+
   Future<void> _confirmar() async {
     final hora = _hora;
-    if (hora == null) return;
+    if (hora == null || _subiendoReferencia) return;
 
     setState(() => _guardando = true);
     final mensajero = ScaffoldMessenger.of(context);
@@ -1114,6 +1198,7 @@ class _BookingSheetState extends State<_BookingSheet> {
         intervalo: _intervalo,
         modalidad: _modalidad,
         ubicacionCliente: _miUbicacion,
+        fotosReferencia: _referencias,
       );
       navegador.pop();
       mensajero.showSnackBar(
@@ -1221,6 +1306,7 @@ class _BookingSheetState extends State<_BookingSheet> {
             ),
             const SizedBox(height: 10),
             _horarios(),
+            _bloqueReferencia(),
             if (_modalidad.esDomicilio && _recargo > 0) ...[
               const SizedBox(height: 20),
               _desglosePrecio(),
@@ -1233,6 +1319,7 @@ class _BookingSheetState extends State<_BookingSheet> {
                 onPressed:
                     (_hora == null ||
                         _guardando ||
+                        _subiendoReferencia ||
                         _faltaDireccion ||
                         _fueraDeCobertura)
                     ? null

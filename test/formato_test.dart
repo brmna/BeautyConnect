@@ -2,6 +2,18 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:beauty_connect/utils/formato.dart';
 
 void main() {
+  group('formatearPrecio', () {
+    test('pone el peso adelante y separa los miles', () {
+      expect(formatearPrecio(2313), r'$2.313');
+      expect(formatearPrecio(125000), r'$125.000');
+    });
+
+    test('no muestra decimales ni se cae con nulo', () {
+      expect(formatearPrecio(null), r'$0');
+      expect(formatearPrecio(1500.7), r'$1.501');
+    });
+  });
+
   group('formatearHora', () {
     test('la medianoche se muestra como 12 AM', () {
       expect(formatearHora('00:00'), '12:00 AM');

@@ -53,6 +53,31 @@ void main() {
     expect(find.text('2 h 30 min aprox.'), findsOneWidget);
   });
 
+  testWidgets('sin descripción la tarjeta no deja un hueco', (tester) async {
+    await pintar(
+      tester,
+      TarjetaServicio(
+        servicio: const {'name': 'Uñas', 'duration': 100, 'price': 40000},
+        accion: BotonReservar(onReservar: () {}),
+      ),
+    );
+
+    final sinTexto = tester.getSize(find.byType(TarjetaServicio)).height;
+
+    await pintar(
+      tester,
+      TarjetaServicio(
+        servicio: _largo,
+        accion: BotonReservar(onReservar: () {}),
+      ),
+    );
+
+    final conTexto = tester.getSize(find.byType(TarjetaServicio)).height;
+
+    expect(sinTexto, lessThan(conTexto));
+    expect(sinTexto, lessThan(150));
+  });
+
   testWidgets('la fila compacta con nombre largo no se desborda', (
     tester,
   ) async {

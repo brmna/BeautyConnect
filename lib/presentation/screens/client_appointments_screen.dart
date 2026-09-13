@@ -22,6 +22,7 @@ import '../widgets/hoja_reagendar.dart';
 import 'bandeja_chats_screen.dart';
 import 'chat_screen.dart';
 import '../widgets/bloque_lugar.dart';
+import '../widgets/fotos_referencia.dart';
 import '../widgets/datos_cita.dart';
 import '../widgets/mensaje.dart';
 import '../widgets/recarga_manual.dart';
@@ -511,6 +512,7 @@ class _TarjetaCita extends StatelessWidget {
                   confirmada: estado == 'confirmed' || estado == 'completed',
                   finalizada: estado == 'completed' || estado == 'cancelled',
                 ),
+              BloqueReferencia(cita: datos, titulo: 'Tu diseño de referencia'),
               if (calificable && !yaCalificada) ...[
                 const SizedBox(height: 12),
                 SizedBox(
