@@ -39,6 +39,7 @@ class _SincronizadorRecordatoriosState
   bool _primerosChats = true;
   final _caducando = <String>{};
   final _perfiles = CachePerfiles();
+  final _inicio = DateTime.now();
   bool _primeraCarga = true;
 
   @override
@@ -102,11 +103,10 @@ class _SincronizadorRecordatoriosState
       _firmaChat[documento.id] = firma;
 
       if (_primerosChats || firma.isEmpty || anterior == firma) continue;
+      if (!avisoVigente(momento, desde: _inicio)) continue;
       if (datos['ultimoAutorId'] == widget.uid) continue;
       if (datos['ultimoEsAviso'] == true) continue;
-      if (ServicioNotificaciones.instancia.chatAbierto == documento.id) {
-        continue;
-      }
+      if (_mirandoElChat(documento.id)) continue;
 
       nuevos.add(datos);
     }
@@ -122,6 +122,12 @@ class _SincronizadorRecordatoriosState
         esMensaje: true,
       );
     }
+  }
+
+  bool _mirandoElChat(String citaId) {
+    if (ServicioNotificaciones.instancia.chatAbierto != citaId) return false;
+
+    return WidgetsBinding.instance.lifecycleState == AppLifecycleState.resumed;
   }
 
   void _caducarAbandonadas(List<QueryDocumentSnapshot> documentos) {
@@ -185,6 +191,7 @@ class _SincronizadorRecordatoriosState
       _firmaPrevia[documento.id] = firma;
 
       if (_primeraCarga || novedad == null || anterior == firma) continue;
+      if (!avisoVigente(novedad.momento, desde: _inicio)) continue;
       nuevas.add(novedad);
     }
 

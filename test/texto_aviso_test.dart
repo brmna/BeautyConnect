@@ -64,6 +64,36 @@ void main() {
     });
   });
 
+  group('avisoVigente', () {
+    test('un evento posterior al arranque sí avisa', () {
+      expect(
+        avisoVigente(_ahora.add(const Duration(seconds: 5)), desde: _ahora),
+        isTrue,
+      );
+    });
+
+    test('un evento viejo no avisa', () {
+      expect(
+        avisoVigente(_ahora.subtract(const Duration(hours: 3)), desde: _ahora),
+        isFalse,
+      );
+    });
+
+    test('tolera un desfase pequeño de reloj', () {
+      expect(
+        avisoVigente(
+          _ahora.subtract(const Duration(seconds: 30)),
+          desde: _ahora,
+        ),
+        isTrue,
+      );
+    });
+
+    test('sin sello de tiempo no avisa', () {
+      expect(avisoVigente(null, desde: _ahora), isFalse);
+    });
+  });
+
   group('avisos de novedades', () {
     test('una solicitud nueva nombra al cliente, el servicio y la hora', () {
       final texto = aviso(citaBase(), esProfesional: true, nombre: 'Daniela');

@@ -101,6 +101,18 @@ DateTime? horaPropuesta(Map<String, dynamic>? cita) {
   );
 }
 
+const Duration toleranciaAviso = Duration(minutes: 2);
+
+bool avisoVigente(
+  DateTime? momento, {
+  required DateTime desde,
+  Duration tolerancia = toleranciaAviso,
+}) {
+  if (momento == null) return false;
+
+  return momento.isAfter(desde.subtract(tolerancia));
+}
+
 String _mayuscula(String texto) =>
     texto.isEmpty ? texto : texto[0].toUpperCase() + texto.substring(1);
 
