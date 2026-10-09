@@ -21,8 +21,23 @@ class AuthWrapper extends StatefulWidget {
 }
 
 class _AuthWrapperState extends State<AuthWrapper> {
+  late final Stream<User?> _sesion = FirebaseAuth.instance.userChanges();
+
   String? _uidPreparado;
   Future<void>? _preparacion;
+
+  String? _uidPerfil;
+  Stream<DocumentSnapshot<Map<String, dynamic>>>? _perfil;
+
+  Stream<DocumentSnapshot<Map<String, dynamic>>> _perfilDe(String uid) {
+    if (_uidPerfil == uid && _perfil != null) return _perfil!;
+
+    _uidPerfil = uid;
+    return _perfil = FirebaseFirestore.instance
+        .collection('users')
+        .doc(uid)
+        .snapshots();
+  }
 
   Future<void> _prepararPerfil(String uid) {
     if (_uidPreparado == uid && _preparacion != null) return _preparacion!;
@@ -45,13 +60,15 @@ class _AuthWrapperState extends State<AuthWrapper> {
     setState(() {
       _uidPreparado = null;
       _preparacion = null;
+      _uidPerfil = null;
+      _perfil = null;
     });
   }
 
   @override
   Widget build(BuildContext context) {
     return StreamBuilder<User?>(
-      stream: FirebaseAuth.instance.userChanges(),
+      stream: _sesion,
       builder: (context, sesion) {
         if (sesion.connectionState == ConnectionState.waiting) {
           return const PantallaCargando();
@@ -79,10 +96,7 @@ class _AuthWrapperState extends State<AuthWrapper> {
             }
 
             return StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
-              stream: FirebaseFirestore.instance
-                  .collection('users')
-                  .doc(usuario.uid)
-                  .snapshots(),
+              stream: _perfilDe(usuario.uid),
               builder: (context, perfil) {
                 if (perfil.hasError) {
                   return _PantallaError(

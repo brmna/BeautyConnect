@@ -400,6 +400,9 @@ class _ClientHomeState extends State<ClientHome>
                 Expanded(
                   child: conRecarga(
                     hijo: CustomScrollView(
+                      key: ValueKey(
+                        '$_etiquetaActiva|$_busqueda|${_etiquetasFoto.join(',')}',
+                      ),
                       keyboardDismissBehavior:
                           ScrollViewKeyboardDismissBehavior.onDrag,
                       slivers: [

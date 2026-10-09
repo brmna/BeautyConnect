@@ -1,6 +1,10 @@
 import 'dart:convert';
+import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:http/http.dart' as http;
+import 'package:http/testing.dart';
+import 'package:image_picker/image_picker.dart';
 
 import 'package:beauty_connect/data/models/diseno.dart';
 import 'package:beauty_connect/data/services/servicio_vision.dart';
@@ -28,7 +32,110 @@ Diseno diseno(String id, List<String> etiquetas, {int favoritos = 0}) => Diseno(
   favoritos: favoritos,
 );
 
+final fotoDePrueba = XFile.fromData(
+  Uint8List.fromList([1, 2, 3]),
+  name: 'unas.jpg',
+);
+
+String respuestaValida() => respuestaGemini(
+  jsonEncode({
+    'sonUnas': true,
+    'etiquetas': ['Gel'],
+  }),
+);
+
+({ServicioVision servicio, List<String> modelosPedidos}) servicioQueResponde(
+  List<int> codigos,
+) {
+  final modelosPedidos = <String>[];
+  var indice = 0;
+
+  final cliente = MockClient((peticion) async {
+    modelosPedidos.add(peticion.url.pathSegments.last.split(':').first);
+    final codigo = indice < codigos.length ? codigos[indice] : 200;
+    indice++;
+    return http.Response(codigo == 200 ? respuestaValida() : '{}', codigo);
+  });
+
+  return (
+    servicio: ServicioVision(
+      cliente: cliente,
+      llave: 'llave-de-prueba',
+      pausas: const [Duration.zero, Duration.zero],
+    ),
+    modelosPedidos: modelosPedidos,
+  );
+}
+
 void main() {
+  group('ServicioVision.leerUnas', () {
+    test('reintenta cuando el modelo está saturado', () async {
+      final prueba = servicioQueResponde([503, 200]);
+
+      final lectura = await prueba.servicio.leerUnas(fotoDePrueba);
+
+      expect(lectura.etiquetas, ['Gel']);
+      expect(prueba.modelosPedidos, ['gemini-3.6-flash', 'gemini-3.6-flash']);
+    });
+
+    test('pasa al modelo de respaldo si el principal sigue saturado', () async {
+      final prueba = servicioQueResponde([503, 503, 429, 200]);
+
+      final lectura = await prueba.servicio.leerUnas(fotoDePrueba);
+
+      expect(lectura.sonUnas, isTrue);
+      expect(prueba.modelosPedidos, [
+        'gemini-3.6-flash',
+        'gemini-3.6-flash',
+        'gemini-3.6-flash',
+        'gemini-3.5-flash-lite',
+      ]);
+    });
+
+    test('pasa al respaldo de una si el principal ya no existe', () async {
+      final prueba = servicioQueResponde([404, 200]);
+
+      await prueba.servicio.leerUnas(fotoDePrueba);
+
+      expect(prueba.modelosPedidos, [
+        'gemini-3.6-flash',
+        'gemini-3.5-flash-lite',
+      ]);
+    });
+
+    test('no reintenta si la llave es inválida', () async {
+      final prueba = servicioQueResponde([403]);
+
+      await expectLater(
+        prueba.servicio.leerUnas(fotoDePrueba),
+        throwsA(
+          isA<ErrorDeVision>().having(
+            (e) => e.mensaje,
+            'mensaje',
+            contains('llave'),
+          ),
+        ),
+      );
+      expect(prueba.modelosPedidos, hasLength(1));
+    });
+
+    test('avisa que está saturado cuando fallan todos los intentos', () async {
+      final prueba = servicioQueResponde(List.filled(6, 503));
+
+      await expectLater(
+        prueba.servicio.leerUnas(fotoDePrueba),
+        throwsA(
+          isA<ErrorDeVision>().having(
+            (e) => e.mensaje,
+            'mensaje',
+            contains('saturado'),
+          ),
+        ),
+      );
+      expect(prueba.modelosPedidos, hasLength(6));
+    });
+  });
+
   group('ServicioVision.interpretar', () {
     test('lee las etiquetas de una respuesta normal', () {
       final lectura = ServicioVision.interpretar(

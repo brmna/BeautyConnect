@@ -23,24 +23,38 @@ class LecturaDeFoto {
 }
 
 class ServicioVision {
-  static const String _llave = String.fromEnvironment('GEMINI_API_KEY');
+  static const String _llaveConfigurada = String.fromEnvironment(
+    'GEMINI_API_KEY',
+  );
   static const String _modelo = String.fromEnvironment(
     'GEMINI_MODELO',
     defaultValue: 'gemini-3.6-flash',
   );
+  static const String _modeloRespaldo = 'gemini-3.5-flash-lite';
 
   static const int maximoEtiquetas = 4;
   static const Duration _espera = Duration(seconds: 30);
+  static const List<Duration> _pausasPorDefecto = [
+    Duration(seconds: 1),
+    Duration(seconds: 2),
+  ];
 
   final http.Client _cliente;
+  final String _llave;
+  final List<Duration> _pausas;
 
-  ServicioVision({http.Client? cliente}) : _cliente = cliente ?? http.Client();
+  ServicioVision({http.Client? cliente, String? llave, List<Duration>? pausas})
+    : _cliente = cliente ?? http.Client(),
+      _llave = llave ?? _llaveConfigurada,
+      _pausas = pausas ?? _pausasPorDefecto;
 
   bool get estaConfigurado => _llave.isNotEmpty;
 
-  Uri get _url => Uri.parse(
+  static List<String> get _modelos => {_modelo, _modeloRespaldo}.toList();
+
+  Uri _url(String modelo) => Uri.parse(
     'https://generativelanguage.googleapis.com/v1beta/models/'
-    '$_modelo:generateContent?key=$_llave',
+    '$modelo:generateContent?key=$_llave',
   );
 
   Future<LecturaDeFoto> leerUnas(XFile archivo) async {
@@ -49,25 +63,45 @@ class ServicioVision {
     final bytes = await archivo.readAsBytes();
     if (bytes.isEmpty) throw const ErrorDeVision('La foto llegó vacía');
 
-    final http.Response respuesta;
+    final cuerpo = jsonEncode(_peticion(bytes, archivo));
+    var ultimoCodigo = 0;
+
+    for (final modelo in _modelos) {
+      for (var intento = 0; intento <= _pausas.length; intento++) {
+        if (intento > 0) await Future.delayed(_pausas[intento - 1]);
+
+        final respuesta = await _enviar(modelo, cuerpo);
+        if (respuesta.statusCode == 200) return interpretar(respuesta.body);
+
+        ultimoCodigo = respuesta.statusCode;
+        if (_esLlaveInvalida(ultimoCodigo)) {
+          throw ErrorDeVision(_explicar(ultimoCodigo));
+        }
+        if (!_esPasajero(ultimoCodigo)) break;
+      }
+    }
+
+    throw ErrorDeVision(_explicar(ultimoCodigo));
+  }
+
+  Future<http.Response> _enviar(String modelo, String cuerpo) async {
     try {
-      respuesta = await _cliente
+      return await _cliente
           .post(
-            _url,
+            _url(modelo),
             headers: const {'Content-Type': 'application/json'},
-            body: jsonEncode(_peticion(bytes, archivo)),
+            body: cuerpo,
           )
           .timeout(_espera);
     } catch (_) {
       throw const ErrorDeVision('No pudimos conectarnos. Revisa tu internet');
     }
-
-    if (respuesta.statusCode != 200) {
-      throw ErrorDeVision(_explicar(respuesta.statusCode));
-    }
-
-    return interpretar(respuesta.body);
   }
+
+  static bool _esLlaveInvalida(int codigo) =>
+      codigo == 400 || codigo == 401 || codigo == 403;
+
+  static bool _esPasajero(int codigo) => codigo == 429 || codigo >= 500;
 
   Map<String, dynamic> _peticion(List<int> bytes, XFile archivo) => {
     'contents': [
@@ -169,12 +203,8 @@ class ServicioVision {
   }
 
   static String _explicar(int codigo) {
-    if (codigo == 400 || codigo == 401 || codigo == 403) {
-      return 'La llave del análisis no es válida';
-    }
-    if (codigo == 404) {
-      return 'El modelo "$_modelo" ya no está disponible';
-    }
+    if (_esLlaveInvalida(codigo)) return 'La llave del análisis no es válida';
+    if (codigo == 404) return 'El análisis no está disponible ahora';
     if (codigo == 429) return 'Demasiadas búsquedas seguidas. Espera un poco';
     if (codigo == 503) {
       return 'El análisis está saturado. Prueba en un momento';

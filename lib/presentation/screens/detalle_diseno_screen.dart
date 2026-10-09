@@ -410,7 +410,7 @@ class _MasTrabajos extends StatelessWidget {
                   final otro = Diseno.desdeDocumento(otros[indice]);
 
                   return GestureDetector(
-                    onTap: () => Navigator.pushReplacement(
+                    onTap: () => Navigator.push(
                       context,
                       MaterialPageRoute(
                         builder: (_) => DetalleDisenoScreen(diseno: otro),
