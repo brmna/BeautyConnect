@@ -1,6 +1,6 @@
 # BeautyConnect
 
-Aplicación móvil en Flutter para conectar manicuristas independientes con clientas en Villavicencio, Meta. Permite buscar profesionales, reservar citas, chatear sobre ellas y calificar el servicio una vez terminado. Es un trabajo de grado de Tecnología en Desarrollo de Software (Uniminuto, Rectoría Orinoquía) y todavía está en fase beta.
+Aplicación móvil en Flutter para conectar manicuristas independientes con clientas en Villavicencio, Meta. Permite buscar profesionales, reservar citas, chatear sobre ellas y calificar el servicio una vez terminado. Es un trabajo de grado de Tecnología en Desarrollo de Software (Uniminuto, Rectoría Orinoquía).
 
 La app tiene dos roles con navegación y pantallas separadas: cliente y profesional (manicurista). El rol se define al registrarse y determina qué se muestra después de iniciar sesión.
 
