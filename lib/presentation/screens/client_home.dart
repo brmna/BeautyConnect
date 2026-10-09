@@ -403,26 +403,8 @@ class _ClientHomeState extends State<ClientHome>
                       keyboardDismissBehavior:
                           ScrollViewKeyboardDismissBehavior.onDrag,
                       slivers: [
-                        const SliverToBoxAdapter(
-                          child: Padding(
-                            padding: EdgeInsets.fromLTRB(16, 8, 16, 10),
-                            child: Row(
-                              children: [
-                                Icon(Icons.trending_up, size: 16),
-                                SizedBox(width: 6),
-                                Text(
-                                  'Tendencias Populares',
-                                  style: TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 14,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
                         SliverPadding(
-                          padding: const EdgeInsets.fromLTRB(12, 0, 12, 20),
+                          padding: const EdgeInsets.fromLTRB(12, 10, 12, 20),
                           sliver: SliverMasonryGrid.count(
                             crossAxisCount: 2,
                             mainAxisSpacing: 10,

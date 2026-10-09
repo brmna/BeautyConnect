@@ -53,6 +53,21 @@ void main() {
     expect(find.text('2 h 30 min aprox.'), findsOneWidget);
   });
 
+  testWidgets('sin acción la tarjeta no ofrece reservar', (tester) async {
+    await pintar(tester, const TarjetaServicio(servicio: _largo));
+
+    expect(find.text('Reservar'), findsNothing);
+    expect(find.byType(BotonReservar), findsNothing);
+  });
+
+  testWidgets('la fila compacta sin acción tampoco ofrece reservar', (
+    tester,
+  ) async {
+    await pintar(tester, const FilaServicio(servicio: _largo));
+
+    expect(find.text('Reservar'), findsNothing);
+  });
+
   testWidgets('sin descripción la tarjeta no deja un hueco', (tester) async {
     await pintar(
       tester,

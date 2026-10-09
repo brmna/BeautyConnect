@@ -50,6 +50,9 @@ class ProfessionalDetailScreen extends StatefulWidget {
 class _ProfessionalDetailScreenState extends State<ProfessionalDetailScreen>
     with SingleTickerProviderStateMixin {
   final _currentUid = FirebaseAuth.instance.currentUser?.uid ?? '';
+
+  bool get _esMiPerfil =>
+      _currentUid.isNotEmpty && widget.professionalId == _currentUid;
   final _favoritos = ServicioFavoritos();
   late final TabController _pestanas;
 
@@ -168,11 +171,11 @@ class _ProfessionalDetailScreenState extends State<ProfessionalDetailScreen>
                         profesionalId: widget.professionalId,
                         onVerServicios: () => _pestanas.animateTo(1),
                         onVerResenas: _verResenas,
-                        onReservar: _abrirHojaReserva,
+                        onReservar: _esMiPerfil ? null : _abrirHojaReserva,
                       ),
                       _PestanaServicios(
                         profesionalId: widget.professionalId,
-                        onReservar: _abrirHojaReserva,
+                        onReservar: _esMiPerfil ? null : _abrirHojaReserva,
                       ),
                       _PestanaPortafolio(profesionalId: widget.professionalId),
                       ResenasDeProfesional(
@@ -208,11 +211,12 @@ class _ProfessionalDetailScreenState extends State<ProfessionalDetailScreen>
           onPressed: () => _compartir(nombre),
           icon: const Icon(Icons.share_outlined, size: 22),
         ),
-        IconButton(
-          tooltip: _isFavorite ? 'Quitar de favoritas' : 'Guardar',
-          onPressed: _alternarFavorito,
-          icon: CorazonAnimado(activo: _isFavorite, tamano: 24),
-        ),
+        if (!_esMiPerfil)
+          IconButton(
+            tooltip: _isFavorite ? 'Quitar de favoritas' : 'Guardar',
+            onPressed: _alternarFavorito,
+            icon: CorazonAnimado(activo: _isFavorite, tamano: 24),
+          ),
       ],
     );
   }
@@ -345,6 +349,34 @@ class _ProfessionalDetailScreenState extends State<ProfessionalDetailScreen>
                 ],
               ),
             ],
+            if (_esMiPerfil) ...[
+              const SizedBox(height: 14),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: TemaApp.infoSuave,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: const Row(
+                  children: [
+                    Icon(
+                      Icons.visibility_outlined,
+                      size: 18,
+                      color: TemaApp.info,
+                    ),
+                    SizedBox(width: 10),
+                    Expanded(
+                      child: Text(
+                        'Así ven tu perfil tus clientas. Desde aquí no puedes '
+                        'reservarte ni escribirte a ti misma.',
+                        style: TextStyle(fontSize: 12.5, color: TemaApp.info),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
             if (!_aceptaCitas) ...[
               const SizedBox(height: 14),
               Container(
@@ -381,6 +413,8 @@ class _ProfessionalDetailScreenState extends State<ProfessionalDetailScreen>
   }
 
   Widget _contacto(Map<String, dynamic> datos, String? telefono) {
+    if (_esMiPerfil) return const SizedBox.shrink();
+
     final hayTelefono = telefono != null && telefono.isNotEmpty;
     final miUid = FirebaseAuth.instance.currentUser?.uid ?? '';
 
@@ -491,6 +525,16 @@ class _ProfessionalDetailScreenState extends State<ProfessionalDetailScreen>
   }
 
   void _abrirHojaReserva(String servicioId, Map<String, dynamic> servicio) {
+    if (_esMiPerfil) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        construirMensaje(
+          'Este es tu perfil, no puedes reservarte a ti misma',
+          tipo: TipoAviso.info,
+        ),
+      );
+      return;
+    }
+
     if (!_aceptaCitas) {
       ScaffoldMessenger.of(context).showSnackBar(
         construirMensaje(
@@ -517,7 +561,7 @@ class _PestanaInfo extends StatelessWidget {
   final String profesionalId;
   final VoidCallback onVerServicios;
   final VoidCallback onVerResenas;
-  final void Function(String, Map<String, dynamic>) onReservar;
+  final void Function(String, Map<String, dynamic>)? onReservar;
 
   const _PestanaInfo({
     required this.datos,
@@ -796,7 +840,7 @@ class _AdelantoResenas extends StatelessWidget {
 
 class _PestanaServicios extends StatelessWidget {
   final String profesionalId;
-  final void Function(String, Map<String, dynamic>) onReservar;
+  final void Function(String, Map<String, dynamic>)? onReservar;
 
   const _PestanaServicios({
     required this.profesionalId,
@@ -831,12 +875,18 @@ class _PestanaServicios extends StatelessWidget {
             final documento = servicios[indice];
             final servicio = documento.data();
 
+            final reservar = onReservar;
+
             return TarjetaServicio(
               servicio: servicio,
-              onTap: () => onReservar(documento.id, servicio),
-              accion: BotonReservar(
-                onReservar: () => onReservar(documento.id, servicio),
-              ),
+              onTap: reservar == null
+                  ? null
+                  : () => reservar(documento.id, servicio),
+              accion: reservar == null
+                  ? null
+                  : BotonReservar(
+                      onReservar: () => reservar(documento.id, servicio),
+                    ),
             );
           },
         );
@@ -1655,7 +1705,7 @@ class _ResumenServicios extends StatelessWidget {
 
   final String profesionalId;
   final VoidCallback onVerTodos;
-  final void Function(String, Map<String, dynamic>) onReservar;
+  final void Function(String, Map<String, dynamic>)? onReservar;
 
   const _ResumenServicios({
     required this.profesionalId,
@@ -1685,10 +1735,13 @@ class _ResumenServicios extends StatelessWidget {
               ...visibles.map(
                 (documento) => FilaServicio(
                   servicio: documento.data(),
-                  accion: TextButton(
-                    onPressed: () => onReservar(documento.id, documento.data()),
-                    child: const Text('Reservar'),
-                  ),
+                  accion: onReservar == null
+                      ? null
+                      : TextButton(
+                          onPressed: () =>
+                              onReservar!(documento.id, documento.data()),
+                          child: const Text('Reservar'),
+                        ),
                 ),
               ),
               if (restantes > 0) ...[
